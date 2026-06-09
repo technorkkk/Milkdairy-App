@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   History,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 
 import { customerSchema, type CustomerInput } from "@/lib/validators";
@@ -46,6 +47,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Sheet,
   SheetContent,
@@ -112,10 +123,14 @@ function milkTypeBadgeClass(type: string): string {
 function CustomerCard({
   customer,
   onSelect,
+  onDelete,
 }: {
   customer: ReturnType<typeof useCustomerStore.getState>["customers"][number];
   onSelect: () => void;
+  onDelete: (customer: ReturnType<typeof useCustomerStore.getState>["customers"][number]) => void;
 }) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const balance =
     customer.billingType === "prepaid"
       ? customer.walletBalance
@@ -123,95 +138,147 @@ function CustomerCard({
 
   const isPositiveBalance = balance >= 0;
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDeleting(true);
+    try {
+      await onDelete(customer);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   return (
-    <motion.button
-      layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      transition={{ duration: 0.2 }}
-      onClick={onSelect}
-      className="w-full text-left"
-    >
-      <div className="flex items-start gap-3 rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md active:scale-[0.98]">
-        {/* Avatar */}
-        <Avatar className="size-11 shrink-0">
-          <AvatarFallback className="bg-emerald-100 text-emerald-700 text-sm font-semibold">
-            {getInitials(customer.name)}
-          </AvatarFallback>
-        </Avatar>
+    <>
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -12 }}
+        transition={{ duration: 0.2 }}
+        className="w-full"
+      >
+        <div
+          className="flex items-start gap-3 rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md active:scale-[0.98] cursor-pointer"
+          onClick={onSelect}
+        >
+          {/* Avatar */}
+          <Avatar className="size-11 shrink-0">
+            <AvatarFallback className="bg-emerald-100 text-emerald-700 text-sm font-semibold">
+              {getInitials(customer.name)}
+            </AvatarFallback>
+          </Avatar>
 
-        {/* Main Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="font-semibold text-foreground truncate text-sm">
-              {customer.name}
-            </h3>
-            <div className="flex items-center gap-1 shrink-0">
-              <ShiftIcon shift={customer.shift} />
-              <span className="text-xs text-muted-foreground">
-                {SHIFT_LABELS[customer.shift]}
-              </span>
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-semibold text-foreground truncate text-sm">
+                {customer.name}
+              </h3>
+              <div className="flex items-center gap-1 shrink-0">
+                <ShiftIcon shift={customer.shift} />
+                <span className="text-xs text-muted-foreground">
+                  {SHIFT_LABELS[customer.shift]}
+                </span>
+              </div>
             </div>
-          </div>
 
-          {customer.phone && (
-            <div className="flex items-center gap-1 mt-0.5">
-              <Phone className="size-3 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground truncate">
-                {customer.phone}
-              </span>
-            </div>
-          )}
-
-          {/* Badges + Qty row */}
-          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            <Badge
-              variant={billingTypeBadgeVariant(customer.billingType)}
-              className="text-[10px] px-1.5 py-0 h-5"
-            >
-              {BILLING_TYPE_LABELS[customer.billingType]}
-            </Badge>
-            <Badge
-              variant="outline"
-              className={`text-[10px] px-1.5 py-0 h-5 ${milkTypeBadgeClass(customer.milkType)}`}
-            >
-              {MILK_TYPES[customer.milkType]}
-            </Badge>
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 text-muted-foreground">
-              {customer.defaultQuantity}L/day
-            </Badge>
-          </div>
-        </div>
-
-        {/* Balance */}
-        <div className="flex flex-col items-end shrink-0">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-            {customer.billingType === "prepaid" ? "Wallet" : "Due"}
-          </span>
-          <div className="flex items-center gap-0.5 mt-0.5">
-            {customer.billingType === "prepaid" ? (
-              <Wallet className="size-3 text-emerald-600" />
-            ) : (
-              <IndianRupee className="size-3 text-red-500" />
+            {customer.phone && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <Phone className="size-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground truncate">
+                  {customer.phone}
+                </span>
+              </div>
             )}
-            <span
-              className={`text-sm font-bold ${
-                customer.billingType === "prepaid"
-                  ? isPositiveBalance
-                    ? "text-emerald-600"
-                    : "text-red-500"
-                  : customer.totalOutstanding > 0
-                    ? "text-red-500"
-                    : "text-emerald-600"
-              }`}
+
+            {/* Badges + Qty row */}
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <Badge
+                variant={billingTypeBadgeVariant(customer.billingType)}
+                className="text-[10px] px-1.5 py-0 h-5"
+              >
+                {BILLING_TYPE_LABELS[customer.billingType]}
+              </Badge>
+              <Badge
+                variant="outline"
+                className={`text-[10px] px-1.5 py-0 h-5 ${milkTypeBadgeClass(customer.milkType)}`}
+              >
+                {MILK_TYPES[customer.milkType]}
+              </Badge>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 text-muted-foreground">
+                {customer.defaultQuantity}L/day
+              </Badge>
+            </div>
+          </div>
+
+          {/* Balance + Delete */}
+          <div className="flex flex-col items-end shrink-0 gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7 text-muted-foreground hover:text-destructive -mr-1 -mt-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDeleteConfirm(true);
+              }}
             >
-              {formatCurrency(Math.abs(balance))}
+              <Trash2 className="size-3.5" />
+            </Button>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+              {customer.billingType === "prepaid" ? "Wallet" : "Due"}
             </span>
+            <div className="flex items-center gap-0.5 mt-0.5">
+              {customer.billingType === "prepaid" ? (
+                <Wallet className="size-3 text-emerald-600" />
+              ) : (
+                <IndianRupee className="size-3 text-red-500" />
+              )}
+              <span
+                className={`text-sm font-bold ${
+                  customer.billingType === "prepaid"
+                    ? isPositiveBalance
+                      ? "text-emerald-600"
+                      : "text-red-500"
+                    : customer.totalOutstanding > 0
+                      ? "text-red-500"
+                      : "text-emerald-600"
+                }`}
+              >
+                {formatCurrency(Math.abs(balance))}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-    </motion.button>
+      </motion.div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Customer?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{customer.name}</strong>? All their delivery records, payments, and ledger entries will also be permanently deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <><Loader2 className="size-4 animate-spin mr-2" />Deleting...</>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -704,7 +771,7 @@ function AddCustomerForm({
                         <FormControl>
                           <Input
                             type="number"
-                            step="0.5"
+                            step="0.01"
                             min="0"
                             placeholder="1"
                             {...field}
@@ -876,7 +943,7 @@ function AddCustomerForm({
 
 // ─── Main Customer List View ───────────────────────────────────────
 export function CustomerListView() {
-  const { customers, loadCustomers, isLoading } = useCustomerStore();
+  const { customers, loadCustomers, isLoading, deleteCustomer } = useCustomerStore();
   const { dairy } = useDairyStore();
   const { navigate } = useUIStore();
 
@@ -983,6 +1050,9 @@ export function CustomerListView() {
                   key={customer.id}
                   customer={customer}
                   onSelect={() => handleSelectCustomer(customer.id)}
+                  onDelete={async (c) => {
+                    await deleteCustomer(c.id);
+                  }}
                 />
               ))}
             </AnimatePresence>

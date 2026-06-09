@@ -791,7 +791,7 @@ function EditCustomerDialog({
                 <FormItem>
                   <FormLabel>Default Qty (L)</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.5" min="0" {...field} />
+                    <Input type="number" step="0.01" min="0" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
