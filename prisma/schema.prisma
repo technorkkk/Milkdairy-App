@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  dairies   Dairy[]
+}
+
+model Dairy {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  phone       String?
+  ownerName   String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  customers   Customer[]
+  milkRates   MilkRate[]
+  expenses    Expense[]
+  inventory   InventoryItem[]
+}
+
+model Customer {
+  id               String    @id @default(cuid())
+  name             String
+  phone            String?
+  address          String?
+  billingType      String    @default("postpaid") // "prepaid" | "postpaid"
+  milkType         String    @default("cow")       // "cow" | "buffalo" | "mixed"
+  defaultQuantity  Float     @default(0)
+  shift            String    @default("morning")   // "morning" | "evening" | "both"
+  walletBalance    Float     @default(0)
+  totalOutstanding Float     @default(0)
+  openingBalance   Float     @default(0)
+  isActive         Boolean   @default(true)
+  startDate        String?   // Customer's actual service start date (YYYY-MM-DD), used for billing cycle calculation
+  dairyId          String
+  dairy            Dairy     @relation(fields: [dairyId], references: [id], onDelete: Cascade)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deliveries       Delivery[]
+  payments         Payment[]
+  ledgerEvents     LedgerEvent[]
+  quantityHistory  QuantityHistory[]
+}
+
+model MilkRate {
+  id        String   @id @default(cuid())
+  milkType  String   // "cow" | "buffalo" | "mixed"
+  pricePerL Float
+  shift     String   @default("morning") // "morning" | "evening" | "both"
+  effectiveFrom DateTime @default(now())
+  dairyId   String
+  dairy     Dairy    @relation(fields: [dairyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Delivery {
+  id           String   @id @default(cuid())
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  date         String   // YYYY-MM-DD format for easy querying
+  shift        String   // "morning" | "evening"
+  quantity     Float
+  milkType     String   // "cow" | "buffalo" | "mixed"
+  pricePerL    Float    // snapshot of rate at time of delivery
+  totalAmount  Float    // quantity * pricePerL
+  status       String   @default("delivered") // "delivered" | "skipped" | "cancelled"
+  notes        String?
+  synced       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  amount      Float
+  paymentMode String   @default("cash") // "cash" | "upi" | "bank" | "other"
+  date        String   // YYYY-MM-DD
+  notes       String?
+  receiptNo   String?
+  synced      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  dairyId     String
+  dairy       Dairy    @relation(fields: [dairyId], references: [id], onDelete: Cascade)
+  category    String   // "feed" | "fuel" | "salary" | "maintenance" | "transport" | "other"
+  amount      Float
+  description String?
+  date        String   // YYYY-MM-DD
+  synced      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model InventoryItem {
+  id          String   @id @default(cuid())
+  dairyId     String
+  dairy       Dairy    @relation(fields: [dairyId], references: [id], onDelete: Cascade)
+  name        String
+  category    String   // "milk" | "feed" | "supply" | "equipment" | "other"
+  quantity    Float    @default(0)
+  unit        String   @default("litre") // "litre" | "kg" | "piece" | "packet"
+  minStock    Float    @default(0)
+  pricePerUnit Float   @default(0)
+  lastRestocked DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LedgerEvent {
+  id           String   @id @default(cuid())
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  eventType    String   // "delivery" | "payment" | "opening_balance" | "rate_change" | "edit" | "delete"
+  referenceId  String?  // ID of the related delivery/payment
+  amount       Float    // positive = debit (delivery cost), negative = credit (payment)
+  balanceAfter Float    // wallet_balance or total_outstanding after this event
+  description  String?
+  date         String   // YYYY-MM-DD
+  createdAt    DateTime @default(now())
+}
+
+model QuantityHistory {
+  id               String   @id @default(cuid())
+  customerId       String
+  customer         Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  quantity         Float    // The new default quantity
+  previousQuantity Float    // The old default quantity
+  effectiveFrom    String   // YYYY-MM-DD from which this quantity is effective
+  createdAt        DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  action      String   // "create" | "update" | "delete" | "login" | "sync"
+  entity      String   // "customer" | "delivery" | "payment" | "expense" | "milk_rate" | "inventory" | "dairy"
+  entityId    String?
+  details     String?  // JSON string with change details
+  timestamp   DateTime @default(now())
+}
+
+model SyncQueue {
+  id          String   @id @default(cuid())
+  operation   String   // "create" | "update" | "delete"
+  entity      String   // "delivery" | "payment" | "expense" | etc.
+  entityId    String
+  payload     String   // JSON string
+  createdAt   DateTime @default(now())
+  attempts    Int      @default(0)
+  lastAttempt DateTime?
+  status      String   @default("pending") // "pending" | "processing" | "failed" | "completed"
+  error       String?
+}
