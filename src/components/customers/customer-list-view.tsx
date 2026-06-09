@@ -377,7 +377,7 @@ function AddCustomerForm({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { addCustomer } = useCustomerStore();
+  const { addCustomer, error: storeError, clearError } = useCustomerStore();
   const { dairy } = useDairyStore();
   const { bulkCreateDeliveries } = useDeliveryStore();
   const { getCurrentRate } = useInventoryStore();
@@ -446,6 +446,7 @@ function AddCustomerForm({
   const onSubmit = async (data: CustomerInput) => {
     if (!dairy?.id) return;
     setSubmitting(true);
+    clearError();
     try {
       // Set startDate: for past entry use the pastStartDate, for new use newStartDate
       const customerStartDate = activeTab === "past" && pastStartDate
@@ -477,8 +478,9 @@ function AddCustomerForm({
       }
 
       resetAndClose();
-    } catch {
-      // error handled in store
+    } catch (err) {
+      // error is set in store, will show in the form
+      console.error("Add customer error:", err);
     } finally {
       setSubmitting(false);
     }
@@ -840,7 +842,13 @@ function AddCustomerForm({
         </ScrollArea>
 
         {/* Fixed Footer */}
-        <div className="shrink-0 border-t bg-background px-4 py-3 flex gap-2">
+        <div className="shrink-0 border-t bg-background px-4 py-3 flex flex-col gap-2">
+          {storeError && (
+            <div className="rounded-md bg-destructive/10 text-destructive text-xs p-2 text-center">
+              {storeError}
+            </div>
+          )}
+          <div className="flex gap-2">
           <Button
             type="button"
             variant="outline"
@@ -859,6 +867,7 @@ function AddCustomerForm({
             {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
             {activeTab === "past" ? "Add with Past Entries" : "Add Customer"}
           </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

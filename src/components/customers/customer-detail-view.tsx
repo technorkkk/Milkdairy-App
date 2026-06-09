@@ -33,6 +33,8 @@ import {
   Copy,
   Check,
   Info,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 
 import { customerSchema, paymentSchema, type CustomerInput, type PaymentInput } from "@/lib/validators";
@@ -67,6 +69,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Form,
   FormControl,
@@ -1198,9 +1210,13 @@ export function CustomerDetailView() {
     useDeliveryStore();
   const { payments, loadPayments, getPaymentsByCustomer } = usePaymentStore();
 
+  const { deleteCustomer } = useCustomerStore();
+
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [shareBillDialogOpen, setShareBillDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [billingCycle, setBillingCycle] = useState<{
     start: Date;
     end: Date;
@@ -1423,6 +1439,15 @@ export function CustomerDetailView() {
           aria-label="Edit customer"
         >
           <Pencil className="size-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-9 shrink-0 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+          onClick={() => setDeleteDialogOpen(true)}
+          aria-label="Delete customer"
+        >
+          <Trash2 className="size-4" />
         </Button>
       </div>
 
@@ -1920,6 +1945,62 @@ export function CustomerDetailView() {
         onOpenChange={setEditDialogOpen}
         customer={customer}
       />
+
+      {/* Delete Customer Confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="size-5 text-red-500" />
+              Delete Customer
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  Kya aap <strong>{customer.name}</strong> ko delete karna chahte hain? Yeh action undo nahi ho sakta.
+                </p>
+                <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-800 p-3">
+                  <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                    Is customer ke saare deliveries, payments, aur ledger records bhi delete ho jayenge:
+                  </p>
+                  <ul className="text-xs text-red-600 dark:text-red-400 mt-1 ml-3 list-disc">
+                    <li>{customerDeliveries.length} delivery records</li>
+                    <li>{customerPayments.length} payment records</li>
+                  </ul>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                setDeleting(true);
+                try {
+                  await deleteCustomer(customer.id);
+                  setDeleteDialogOpen(false);
+                  navigate("customers");
+                } catch {
+                  // error handled in store
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Customer"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {billingCycle && cycleStats && (
         <ShareBillDialog
