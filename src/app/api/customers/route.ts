@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { roundTo2, reconcileAccount } from "@/lib/accounting";
 
 /**
@@ -7,30 +7,40 @@ import { roundTo2, reconcileAccount } from "@/lib/accounting";
  * based on all their deliveries and payments.
  */
 async function recalculateCustomerBalances(customerId: string) {
-  const customer = await db.customer.findUnique({
-    where: { id: customerId },
-    include: {
-      deliveries: { select: { quantity: true, pricePerL: true } },
-      payments: { select: { amount: true } },
-    },
-  });
+  const { data: customer } = await supabase
+    .from("Customer")
+    .select("id, billingType, openingBalance")
+    .eq("id", customerId)
+    .single();
 
   if (!customer) return;
+
+  const { data: deliveries } = await supabase
+    .from("Delivery")
+    .select("quantity, pricePerL")
+    .eq("customerId", customerId);
+
+  const { data: payments } = await supabase
+    .from("Payment")
+    .select("amount")
+    .eq("customerId", customerId);
 
   const result = reconcileAccount(
     customer.billingType as "prepaid" | "postpaid",
     customer.openingBalance,
-    customer.deliveries,
-    customer.payments
+    deliveries || [],
+    payments || []
   );
 
-  await db.customer.update({
-    where: { id: customerId },
-    data: {
+  await supabase
+    .from("Customer")
+    .update({
       walletBalance: result.walletBalance,
       totalOutstanding: result.totalOutstanding,
-    },
-  });
+    })
+    .eq("id", customerId);
+
+  return result;
 }
 
 // GET /api/customers?dairyId=xxx
@@ -46,12 +56,21 @@ export async function GET(request: Request) {
       );
     }
 
-    const customers = await db.customer.findMany({
-      where: { dairyId },
-      orderBy: { createdAt: "desc" },
-    });
+    const { data: customers, error } = await supabase
+      .from("Customer")
+      .select("*")
+      .eq("dairyId", dairyId)
+      .order("createdAt", { ascending: false });
 
-    return NextResponse.json({ customers });
+    if (error) {
+      console.error("GET /api/customers error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch customers" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ customers: customers || [] });
   } catch (error) {
     console.error("GET /api/customers error:", error);
     return NextResponse.json(
@@ -87,7 +106,12 @@ export async function POST(request: Request) {
     }
 
     // Verify the dairy exists
-    const dairy = await db.dairy.findUnique({ where: { id: dairyId } });
+    const { data: dairy } = await supabase
+      .from("Dairy")
+      .select("id")
+      .eq("id", dairyId)
+      .maybeSingle();
+
     if (!dairy) {
       return NextResponse.json(
         { error: "Dairy not found" },
@@ -95,8 +119,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const customer = await db.customer.create({
-      data: {
+    const { data: customer, error: insertError } = await supabase
+      .from("Customer")
+      .insert({
         name,
         phone: phone || null,
         address: address || null,
@@ -108,24 +133,31 @@ export async function POST(request: Request) {
         isActive,
         startDate: startDate || null,
         dairyId,
-      },
-    });
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("POST /api/customers error:", insertError);
+      return NextResponse.json(
+        { error: "Failed to create customer" },
+        { status: 500 }
+      );
+    }
 
     // If openingBalance > 0, create a ledger event
-    if (openingBalance > 0) {
-      await db.ledgerEvent.create({
-        data: {
-          customerId: customer.id,
-          eventType: "opening_balance",
-          referenceId: customer.id,
-          amount:
-            billingType === "prepaid"
-              ? -roundTo2(openingBalance)
-              : roundTo2(openingBalance),
-          balanceAfter: 0, // will be updated after recalculation
-          description: `Opening balance: ₹${roundTo2(openingBalance)} (${billingType})`,
-          date: new Date().toISOString().split("T")[0],
-        },
+    if (openingBalance > 0 && customer) {
+      await supabase.from("LedgerEvent").insert({
+        customerId: customer.id,
+        eventType: "opening_balance",
+        referenceId: customer.id,
+        amount:
+          billingType === "prepaid"
+            ? -roundTo2(openingBalance)
+            : roundTo2(openingBalance),
+        balanceAfter: 0, // will be updated after recalculation
+        description: `Opening balance: ₹${roundTo2(openingBalance)} (${billingType})`,
+        date: new Date().toISOString().split("T")[0],
       });
     }
 
@@ -133,9 +165,11 @@ export async function POST(request: Request) {
     await recalculateCustomerBalances(customer.id);
 
     // Fetch the updated customer to return
-    const updatedCustomer = await db.customer.findUnique({
-      where: { id: customer.id },
-    });
+    const { data: updatedCustomer } = await supabase
+      .from("Customer")
+      .select("*")
+      .eq("id", customer.id)
+      .single();
 
     return NextResponse.json({ customer: updatedCustomer }, { status: 201 });
   } catch (error) {
@@ -160,7 +194,12 @@ export async function PUT(request: Request) {
       );
     }
 
-    const existingCustomer = await db.customer.findUnique({ where: { id } });
+    const { data: existingCustomer } = await supabase
+      .from("Customer")
+      .select("*")
+      .eq("id", id)
+      .single();
+
     if (!existingCustomer) {
       return NextResponse.json(
         { error: "Customer not found" },
@@ -188,43 +227,38 @@ export async function PUT(request: Request) {
       const oldQty = existingCustomer.defaultQuantity;
       const newQty = roundTo2(fieldsToUpdate.defaultQuantity);
       if (oldQty !== newQty) {
-        await db.quantityHistory.create({
-          data: {
-            customerId: id,
-            quantity: newQty,
-            previousQuantity: oldQty,
-            effectiveFrom: fieldsToUpdate.quantityEffectiveFrom,
-          },
+        await supabase.from("QuantityHistory").insert({
+          customerId: id,
+          quantity: newQty,
+          previousQuantity: oldQty,
+          effectiveFrom: fieldsToUpdate.quantityEffectiveFrom,
         });
 
         // Create a ledger event for the quantity change
-        await db.ledgerEvent.create({
-          data: {
-            customerId: id,
-            eventType: "edit",
-            referenceId: id,
-            amount: 0,
-            balanceAfter: existingCustomer.billingType === "prepaid"
-              ? existingCustomer.walletBalance
-              : existingCustomer.totalOutstanding,
-            description: `Quantity changed: ${oldQty}L → ${newQty}L (from ${fieldsToUpdate.quantityEffectiveFrom})`,
-            date: fieldsToUpdate.quantityEffectiveFrom,
-          },
+        await supabase.from("LedgerEvent").insert({
+          customerId: id,
+          eventType: "edit",
+          referenceId: id,
+          amount: 0,
+          balanceAfter: existingCustomer.billingType === "prepaid"
+            ? existingCustomer.walletBalance
+            : existingCustomer.totalOutstanding,
+          description: `Quantity changed: ${oldQty}L → ${newQty}L (from ${fieldsToUpdate.quantityEffectiveFrom})`,
+          date: fieldsToUpdate.quantityEffectiveFrom,
         });
       }
     }
 
-    await db.customer.update({
-      where: { id },
-      data,
-    });
+    await supabase.from("Customer").update(data).eq("id", id);
 
     // Recalculate balances after update
     await recalculateCustomerBalances(id);
 
-    const updatedCustomer = await db.customer.findUnique({
-      where: { id },
-    });
+    const { data: updatedCustomer } = await supabase
+      .from("Customer")
+      .select("*")
+      .eq("id", id)
+      .single();
 
     return NextResponse.json({ customer: updatedCustomer });
   } catch (error) {
@@ -249,7 +283,12 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const existingCustomer = await db.customer.findUnique({ where: { id } });
+    const { data: existingCustomer } = await supabase
+      .from("Customer")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
     if (!existingCustomer) {
       return NextResponse.json(
         { error: "Customer not found" },
@@ -257,8 +296,26 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Cascade delete will handle deliveries, payments, and ledgerEvents
-    await db.customer.delete({ where: { id } });
+    // Delete associated records (Supabase cascade will handle related records if FK is set up)
+    // First delete ledger events and quantity history
+    await supabase.from("LedgerEvent").delete().eq("customerId", id);
+    await supabase.from("QuantityHistory").delete().eq("customerId", id);
+    await supabase.from("Delivery").delete().eq("customerId", id);
+    await supabase.from("Payment").delete().eq("customerId", id);
+
+    // Then delete the customer
+    const { error: deleteError } = await supabase
+      .from("Customer")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      console.error("DELETE /api/customers error:", deleteError);
+      return NextResponse.json(
+        { error: "Failed to delete customer" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       message: "Customer deleted successfully",

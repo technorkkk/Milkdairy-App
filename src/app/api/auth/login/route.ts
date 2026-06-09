@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
+import { verifyPassword } from '@/lib/password';
 
 export async function POST(request: Request) {
   try {
@@ -15,11 +16,13 @@ export async function POST(request: Request) {
     }
 
     // Find user by email
-    const user = await db.user.findUnique({
-      where: { email },
-    });
+    const { data: user, error: lookupError } = await supabase
+      .from('User')
+      .select('id, email, name, phone, password')
+      .eq('email', email)
+      .single();
 
-    if (!user) {
+    if (lookupError || !user) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
@@ -27,20 +30,7 @@ export async function POST(request: Request) {
     }
 
     // Verify password
-    let isValid = false;
-
-    try {
-      // Try Bun.password.verify first
-      isValid = await Bun.password.verify(password, user.password);
-    } catch {
-      // Fallback: compare SHA-256 hashes for the basic hash approach
-      const encoder = new TextEncoder();
-      const data = encoder.encode(password);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const inputHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-      isValid = inputHash === user.password;
-    }
+    const isValid = await verifyPassword(password, user.password);
 
     if (!isValid) {
       return NextResponse.json(

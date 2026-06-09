@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { roundTo2, reconcileAccount } from "@/lib/accounting";
 
 /**
@@ -7,33 +7,46 @@ import { roundTo2, reconcileAccount } from "@/lib/accounting";
  * based on all their deliveries and payments.
  */
 async function recalculateCustomerBalances(customerId: string) {
-  const customer = await db.customer.findUnique({
-    where: { id: customerId },
-    include: {
-      deliveries: { select: { quantity: true, pricePerL: true } },
-      payments: { select: { amount: true } },
-    },
-  });
+  const { data: customer } = await supabase
+    .from("Customer")
+    .select("id, billingType, openingBalance")
+    .eq("id", customerId)
+    .single();
 
   if (!customer) return;
+
+  const { data: deliveries } = await supabase
+    .from("Delivery")
+    .select("quantity, pricePerL")
+    .eq("customerId", customerId);
+
+  const { data: payments } = await supabase
+    .from("Payment")
+    .select("amount")
+    .eq("customerId", customerId);
 
   const result = reconcileAccount(
     customer.billingType as "prepaid" | "postpaid",
     customer.openingBalance,
-    customer.deliveries,
-    customer.payments
+    deliveries || [],
+    payments || []
   );
 
-  await db.customer.update({
-    where: { id: customerId },
-    data: {
+  await supabase
+    .from("Customer")
+    .update({
       walletBalance: result.walletBalance,
       totalOutstanding: result.totalOutstanding,
-    },
-  });
+    })
+    .eq("id", customerId);
 
   return result;
 }
+
+const SHIFT_LABELS_MAP: Record<string, string> = {
+  morning: "Morning",
+  evening: "Evening",
+};
 
 // GET /api/deliveries?dairyId=xxx&dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
 export async function GET(request: Request) {
@@ -51,38 +64,42 @@ export async function GET(request: Request) {
     }
 
     // Find all customer IDs for this dairy
-    const dairyCustomers = await db.customer.findMany({
-      where: { dairyId },
-      select: { id: true },
-    });
+    const { data: dairyCustomers } = await supabase
+      .from("Customer")
+      .select("id")
+      .eq("dairyId", dairyId);
 
-    const customerIds = dairyCustomers.map((c) => c.id);
+    const customerIds = (dairyCustomers || []).map((c) => c.id);
 
     if (customerIds.length === 0) {
       return NextResponse.json({ deliveries: [] });
     }
 
-    // Build date filter
-    const dateFilter: Record<string, unknown> = {};
-    if (dateFrom || dateTo) {
-      dateFilter.gte = dateFrom || undefined;
-      dateFilter.lte = dateTo || undefined;
+    // Build query for deliveries
+    let query = supabase
+      .from("Delivery")
+      .select("*, customer:Customer(id, name, milkType, billingType)")
+      .in("customerId", customerIds)
+      .order("date", { ascending: false });
+
+    if (dateFrom) {
+      query = query.gte("date", dateFrom);
+    }
+    if (dateTo) {
+      query = query.lte("date", dateTo);
     }
 
-    const deliveries = await db.delivery.findMany({
-      where: {
-        customerId: { in: customerIds },
-        ...(dateFrom || dateTo ? { date: dateFilter } : {}),
-      },
-      include: {
-        customer: {
-          select: { id: true, name: true, milkType: true, billingType: true },
-        },
-      },
-      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    });
+    const { data: deliveries, error } = await query;
 
-    return NextResponse.json({ deliveries });
+    if (error) {
+      console.error("GET /api/deliveries error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch deliveries" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ deliveries: deliveries || [] });
   } catch (error) {
     console.error("GET /api/deliveries error:", error);
     return NextResponse.json(
@@ -141,9 +158,11 @@ export async function POST(request: Request) {
     }
 
     // Verify customer exists
-    const customer = await db.customer.findUnique({
-      where: { id: customerId },
-    });
+    const { data: customer } = await supabase
+      .from("Customer")
+      .select("id, billingType")
+      .eq("id", customerId)
+      .maybeSingle();
 
     if (!customer) {
       return NextResponse.json(
@@ -155,8 +174,9 @@ export async function POST(request: Request) {
     const totalAmount = roundTo2(quantity * pricePerL);
 
     // Create the delivery
-    const delivery = await db.delivery.create({
-      data: {
+    const { data: delivery, error: insertError } = await supabase
+      .from("Delivery")
+      .insert({
         customerId,
         date,
         shift,
@@ -166,20 +186,27 @@ export async function POST(request: Request) {
         totalAmount,
         status,
         notes: notes || null,
-      },
-    });
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("POST /api/deliveries error:", insertError);
+      return NextResponse.json(
+        { error: "Failed to create delivery" },
+        { status: 500 }
+      );
+    }
 
     // Create a ledger event for the delivery
-    await db.ledgerEvent.create({
-      data: {
-        customerId,
-        eventType: "delivery",
-        referenceId: delivery.id,
-        amount: totalAmount,
-        balanceAfter: 0, // placeholder, will be corrected by recalculation
-        description: `Delivery: ${quantity}L @ ₹${pricePerL}/L`,
-        date,
-      },
+    await supabase.from("LedgerEvent").insert({
+      customerId,
+      eventType: "delivery",
+      referenceId: delivery.id,
+      amount: totalAmount,
+      balanceAfter: 0, // placeholder, will be corrected by recalculation
+      description: `Delivery: ${quantity}L @ ₹${pricePerL}/L`,
+      date,
     });
 
     // Recalculate the customer's balances
@@ -191,10 +218,11 @@ export async function POST(request: Request) {
         ? result?.walletBalance ?? 0
         : result?.totalOutstanding ?? 0;
 
-    await db.ledgerEvent.updateMany({
-      where: { referenceId: delivery.id, eventType: "delivery" },
-      data: { balanceAfter: roundTo2(balanceAfter) },
-    });
+    await supabase
+      .from("LedgerEvent")
+      .update({ balanceAfter: roundTo2(balanceAfter) })
+      .eq("referenceId", delivery.id)
+      .eq("eventType", "delivery");
 
     return NextResponse.json({ delivery }, { status: 201 });
   } catch (error) {
@@ -219,9 +247,11 @@ export async function PUT(request: Request) {
       );
     }
 
-    const existingDelivery = await db.delivery.findUnique({
-      where: { id },
-    });
+    const { data: existingDelivery } = await supabase
+      .from("Delivery")
+      .select("*")
+      .eq("id", id)
+      .single();
 
     if (!existingDelivery) {
       return NextResponse.json(
@@ -252,30 +282,30 @@ export async function PUT(request: Request) {
 
     data.totalAmount = roundTo2(finalQuantity * finalPricePerL);
 
-    await db.delivery.update({
-      where: { id },
-      data,
-    });
+    await supabase.from("Delivery").update(data).eq("id", id);
 
     // Update the associated ledger event amount if cost-related fields changed
     if (fieldsToUpdate.quantity !== undefined || fieldsToUpdate.pricePerL !== undefined) {
       const newAmount = roundTo2(finalQuantity * finalPricePerL);
-      await db.ledgerEvent.updateMany({
-        where: { referenceId: id, eventType: "delivery" },
-        data: {
+      await supabase
+        .from("LedgerEvent")
+        .update({
           amount: newAmount,
           description: `Delivery: ${finalQuantity}L @ ₹${finalPricePerL}/L`,
-        },
-      });
+        })
+        .eq("referenceId", id)
+        .eq("eventType", "delivery");
     }
 
     // Recalculate customer balances
     const result = await recalculateCustomerBalances(existingDelivery.customerId);
 
     // Update ledger event balanceAfter
-    const customer = await db.customer.findUnique({
-      where: { id: existingDelivery.customerId },
-    });
+    const { data: customer } = await supabase
+      .from("Customer")
+      .select("billingType")
+      .eq("id", existingDelivery.customerId)
+      .single();
 
     if (customer && result) {
       const balanceAfter =
@@ -283,15 +313,18 @@ export async function PUT(request: Request) {
           ? result.walletBalance
           : result.totalOutstanding;
 
-      await db.ledgerEvent.updateMany({
-        where: { referenceId: id, eventType: "delivery" },
-        data: { balanceAfter: roundTo2(balanceAfter) },
-      });
+      await supabase
+        .from("LedgerEvent")
+        .update({ balanceAfter: roundTo2(balanceAfter) })
+        .eq("referenceId", id)
+        .eq("eventType", "delivery");
     }
 
-    const updatedDelivery = await db.delivery.findUnique({
-      where: { id },
-    });
+    const { data: updatedDelivery } = await supabase
+      .from("Delivery")
+      .select("*")
+      .eq("id", id)
+      .single();
 
     return NextResponse.json({ delivery: updatedDelivery });
   } catch (error) {
@@ -303,9 +336,8 @@ export async function PUT(request: Request) {
   }
 }
 
-// POST /api/deliveries — bulk create for past entries
-// Body: { action: "bulk", customerId, startDate, absentDates: string[], shift, milkType, pricePerL, defaultQuantity }
-export async function bulkCreateDeliveries(body: {
+// Bulk create deliveries for past entries
+async function bulkCreateDeliveries(body: {
   customerId: string;
   startDate: string;
   absentDates: string[];
@@ -316,7 +348,11 @@ export async function bulkCreateDeliveries(body: {
 }) {
   const { customerId, startDate, absentDates, shift, milkType, pricePerL, defaultQuantity } = body;
 
-  const customer = await db.customer.findUnique({ where: { id: customerId } });
+  const { data: customer } = await supabase
+    .from("Customer")
+    .select("id")
+    .eq("id", customerId)
+    .single();
   if (!customer) throw new Error("Customer not found");
 
   const today = new Date().toISOString().split("T")[0];
@@ -342,9 +378,13 @@ export async function bulkCreateDeliveries(body: {
 
     for (const s of shifts) {
       // Check if delivery already exists for this date+shift
-      const existing = await db.delivery.findFirst({
-        where: { customerId, date: dateStr, shift: s },
-      });
+      const { data: existing } = await supabase
+        .from("Delivery")
+        .select("id")
+        .eq("customerId", customerId)
+        .eq("date", dateStr)
+        .eq("shift", s)
+        .maybeSingle();
 
       if (existing) continue; // Skip if already exists
 
@@ -352,8 +392,9 @@ export async function bulkCreateDeliveries(body: {
       const status = isAbsent ? "skipped" : "delivered";
       const totalAmount = roundTo2(qty * pricePerL);
 
-      const delivery = await db.delivery.create({
-        data: {
+      const { data: delivery } = await supabase
+        .from("Delivery")
+        .insert({
           customerId,
           date: dateStr,
           shift: s,
@@ -363,12 +404,13 @@ export async function bulkCreateDeliveries(body: {
           totalAmount,
           status,
           notes: isAbsent ? "Marked absent" : null,
-        },
-      });
+        })
+        .select()
+        .single();
 
       // Create ledger event
-      await db.ledgerEvent.create({
-        data: {
+      if (delivery) {
+        await supabase.from("LedgerEvent").insert({
           customerId,
           eventType: "delivery",
           referenceId: delivery.id,
@@ -378,10 +420,10 @@ export async function bulkCreateDeliveries(body: {
             ? `Absent: ${dateStr} (${SHIFT_LABELS_MAP[s]})`
             : `Delivery: ${qty}L @ ₹${pricePerL}/L`,
           date: dateStr,
-        },
-      });
+        });
 
-      createdDeliveries.push(delivery);
+        createdDeliveries.push(delivery);
+      }
     }
   }
 
@@ -390,11 +432,6 @@ export async function bulkCreateDeliveries(body: {
 
   return createdDeliveries;
 }
-
-const SHIFT_LABELS_MAP: Record<string, string> = {
-  morning: "Morning",
-  evening: "Evening",
-};
 
 // DELETE /api/deliveries?id=xxx
 export async function DELETE(request: Request) {
@@ -409,9 +446,11 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const existingDelivery = await db.delivery.findUnique({
-      where: { id },
-    });
+    const { data: existingDelivery } = await supabase
+      .from("Delivery")
+      .select("id, customerId")
+      .eq("id", id)
+      .maybeSingle();
 
     if (!existingDelivery) {
       return NextResponse.json(
@@ -423,12 +462,21 @@ export async function DELETE(request: Request) {
     const customerId = existingDelivery.customerId;
 
     // Delete associated ledger events for this delivery
-    await db.ledgerEvent.deleteMany({
-      where: { referenceId: id, eventType: "delivery" },
-    });
+    await supabase.from("LedgerEvent").delete().eq("referenceId", id).eq("eventType", "delivery");
 
     // Delete the delivery
-    await db.delivery.delete({ where: { id } });
+    const { error: deleteError } = await supabase
+      .from("Delivery")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      console.error("DELETE /api/deliveries error:", deleteError);
+      return NextResponse.json(
+        { error: "Failed to delete delivery" },
+        { status: 500 }
+      );
+    }
 
     // Recalculate customer balances
     await recalculateCustomerBalances(customerId);

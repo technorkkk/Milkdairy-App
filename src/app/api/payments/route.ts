@@ -1,32 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
+import { roundTo2 } from "@/lib/accounting";
 
 /**
  * Helper: recalculate a customer's walletBalance and totalOutstanding.
- * - Total Deliveries Cost = sum(quantity * pricePerL) for that customer
- * - Total Payments = sum(amount) for that customer
- * - Prepaid:  wallet_balance = (Total Payments + openingBalance) - Total Deliveries Cost; total_outstanding = 0
- * - Postpaid: total_outstanding = max(0, Total Deliveries Cost + openingBalance - Total Payments); wallet_balance = 0
  */
 async function recalcCustomerBalances(customerId: string) {
-  const customer = await db.customer.findUnique({ where: { id: customerId } });
+  const { data: customer } = await supabase
+    .from("Customer")
+    .select("id, billingType, openingBalance")
+    .eq("id", customerId)
+    .single();
+
   if (!customer) return;
 
-  const deliveries = await db.delivery.findMany({
-    where: { customerId, status: "delivered" },
-    select: { quantity: true, pricePerL: true },
-  });
+  const { data: deliveries } = await supabase
+    .from("Delivery")
+    .select("quantity, pricePerL")
+    .eq("customerId", customerId)
+    .eq("status", "delivered");
 
-  const payments = await db.payment.findMany({
-    where: { customerId },
-    select: { amount: true },
-  });
+  const { data: payments } = await supabase
+    .from("Payment")
+    .select("amount")
+    .eq("customerId", customerId);
 
-  const totalDeliveriesCost = deliveries.reduce(
+  const totalDeliveriesCost = (deliveries || []).reduce(
     (sum, d) => sum + d.quantity * d.pricePerL,
     0
   );
-  const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalPayments = (payments || []).reduce((sum, p) => sum + p.amount, 0);
 
   let walletBalance = 0;
   let totalOutstanding = 0;
@@ -50,10 +53,10 @@ async function recalcCustomerBalances(customerId: string) {
   walletBalance = Math.round(walletBalance * 100) / 100;
   totalOutstanding = Math.round(totalOutstanding * 100) / 100;
 
-  await db.customer.update({
-    where: { id: customerId },
-    data: { walletBalance, totalOutstanding },
-  });
+  await supabase
+    .from("Customer")
+    .update({ walletBalance, totalOutstanding })
+    .eq("id", customerId);
 
   return { walletBalance, totalOutstanding };
 }
@@ -74,32 +77,43 @@ export async function GET(request: NextRequest) {
     }
 
     // Find all customer IDs for this dairy
-    const customers = await db.customer.findMany({
-      where: { dairyId },
-      select: { id: true },
-    });
-    const customerIds = customers.map((c) => c.id);
+    const { data: customers } = await supabase
+      .from("Customer")
+      .select("id")
+      .eq("dairyId", dairyId);
+
+    const customerIds = (customers || []).map((c) => c.id);
 
     if (customerIds.length === 0) {
       return NextResponse.json([]);
     }
 
-    // Build date filter
-    const dateFilter: Record<string, string> = {};
-    if (dateFrom) dateFilter.gte = dateFrom;
-    if (dateTo) dateFilter.lte = dateTo;
+    // Build query for payments
+    let query = supabase
+      .from("Payment")
+      .select("*, customer:Customer(name, phone)")
+      .in("customerId", customerIds)
+      .order("date", { ascending: false });
 
-    const payments = await db.payment.findMany({
-      where: {
-        customerId: { in: customerIds },
-        ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
-      },
-      include: { customer: { select: { name: true, phone: true } } },
-      orderBy: { date: "desc" },
-    });
+    if (dateFrom) {
+      query = query.gte("date", dateFrom);
+    }
+    if (dateTo) {
+      query = query.lte("date", dateTo);
+    }
+
+    const { data: payments, error } = await query;
+
+    if (error) {
+      console.error("GET /api/payments error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch payments" },
+        { status: 500 }
+      );
+    }
 
     // Round amounts
-    const result = payments.map((p) => ({
+    const result = (payments || []).map((p) => ({
       ...p,
       amount: Math.round(p.amount * 100) / 100,
     }));
@@ -131,8 +145,9 @@ export async function POST(request: NextRequest) {
     const roundedAmount = Math.round(amount * 100) / 100;
 
     // Create the payment
-    const payment = await db.payment.create({
-      data: {
+    const { data: payment, error: insertError } = await supabase
+      .from("Payment")
+      .insert({
         customerId,
         amount: roundedAmount,
         paymentMode: paymentMode || "cash",
@@ -140,14 +155,24 @@ export async function POST(request: NextRequest) {
         notes: notes || null,
         receiptNo: receiptNo || null,
         synced: synced !== undefined ? synced : true,
-      },
-      include: { customer: { select: { name: true, phone: true } } },
-    });
+      })
+      .select("*, customer:Customer(name, phone)")
+      .single();
+
+    if (insertError) {
+      console.error("POST /api/payments error:", insertError);
+      return NextResponse.json(
+        { error: "Failed to create payment" },
+        { status: 500 }
+      );
+    }
 
     // Create a ledger event (negative amount = credit)
-    const customer = await db.customer.findUnique({
-      where: { id: customerId },
-    });
+    const { data: customer } = await supabase
+      .from("Customer")
+      .select("id, billingType")
+      .eq("id", customerId)
+      .single();
 
     if (customer) {
       // Get current balance for balanceAfter
@@ -157,16 +182,14 @@ export async function POST(request: NextRequest) {
           ? balances?.walletBalance ?? 0
           : balances?.totalOutstanding ?? 0;
 
-      await db.ledgerEvent.create({
-        data: {
-          customerId,
-          eventType: "payment",
-          referenceId: payment.id,
-          amount: -roundedAmount, // negative for credit
-          balanceAfter: Math.round(balanceAfter * 100) / 100,
-          description: `Payment of ₹${roundedAmount} via ${paymentMode || "cash"}`,
-          date,
-        },
+      await supabase.from("LedgerEvent").insert({
+        customerId,
+        eventType: "payment",
+        referenceId: payment.id,
+        amount: -roundedAmount, // negative for credit
+        balanceAfter: Math.round(balanceAfter * 100) / 100,
+        description: `Payment of ₹${roundedAmount} via ${paymentMode || "cash"}`,
+        date,
       });
     }
 
@@ -197,7 +220,12 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const existing = await db.payment.findUnique({ where: { id } });
+    const { data: existing } = await supabase
+      .from("Payment")
+      .select("*")
+      .eq("id", id)
+      .single();
+
     if (!existing) {
       return NextResponse.json(
         { error: "Payment not found" },
@@ -213,20 +241,32 @@ export async function PUT(request: NextRequest) {
     if (receiptNo !== undefined) data.receiptNo = receiptNo;
     if (synced !== undefined) data.synced = synced;
 
-    const payment = await db.payment.update({
-      where: { id },
-      data,
-      include: { customer: { select: { name: true, phone: true } } },
-    });
+    const { data: payment, error: updateError } = await supabase
+      .from("Payment")
+      .update(data)
+      .eq("id", id)
+      .select("*, customer:Customer(name, phone)")
+      .single();
+
+    if (updateError) {
+      console.error("PUT /api/payments error:", updateError);
+      return NextResponse.json(
+        { error: "Failed to update payment" },
+        { status: 500 }
+      );
+    }
 
     // Recalculate balances for the affected customer
     const targetCustomerId = customerId || existing.customerId;
     await recalcCustomerBalances(targetCustomerId);
 
     // Create an edit ledger event
-    const customer = await db.customer.findUnique({
-      where: { id: targetCustomerId },
-    });
+    const { data: customer } = await supabase
+      .from("Customer")
+      .select("billingType")
+      .eq("id", targetCustomerId)
+      .single();
+
     if (customer) {
       const updatedBalances = await recalcCustomerBalances(targetCustomerId);
       const balanceAfter =
@@ -234,16 +274,14 @@ export async function PUT(request: NextRequest) {
           ? updatedBalances?.walletBalance ?? 0
           : updatedBalances?.totalOutstanding ?? 0;
 
-      await db.ledgerEvent.create({
-        data: {
-          customerId: targetCustomerId,
-          eventType: "edit",
-          referenceId: id,
-          amount: -(data.amount as number ?? existing.amount),
-          balanceAfter: Math.round(balanceAfter * 100) / 100,
-          description: `Payment updated`,
-          date: payment.date,
-        },
+      await supabase.from("LedgerEvent").insert({
+        customerId: targetCustomerId,
+        eventType: "edit",
+        referenceId: id,
+        amount: -((data.amount as number) ?? existing.amount),
+        balanceAfter: Math.round(balanceAfter * 100) / 100,
+        description: `Payment updated`,
+        date: payment.date,
       });
     }
 
@@ -273,7 +311,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const existing = await db.payment.findUnique({ where: { id } });
+    const { data: existing } = await supabase
+      .from("Payment")
+      .select("*")
+      .eq("id", id)
+      .single();
+
     if (!existing) {
       return NextResponse.json(
         { error: "Payment not found" },
@@ -283,12 +326,26 @@ export async function DELETE(request: NextRequest) {
 
     const customerId = existing.customerId;
 
-    // Create a delete ledger event before deleting
-    const customer = await db.customer.findUnique({
-      where: { id: customerId },
-    });
+    // Get customer info before deleting
+    const { data: customer } = await supabase
+      .from("Customer")
+      .select("id, billingType")
+      .eq("id", customerId)
+      .single();
 
-    await db.payment.delete({ where: { id } });
+    // Delete the payment
+    const { error: deleteError } = await supabase
+      .from("Payment")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      console.error("DELETE /api/payments error:", deleteError);
+      return NextResponse.json(
+        { error: "Failed to delete payment" },
+        { status: 500 }
+      );
+    }
 
     // Recalculate balances
     if (customer) {
@@ -298,16 +355,14 @@ export async function DELETE(request: NextRequest) {
           ? updatedBalances?.walletBalance ?? 0
           : updatedBalances?.totalOutstanding ?? 0;
 
-      await db.ledgerEvent.create({
-        data: {
-          customerId,
-          eventType: "delete",
-          referenceId: id,
-          amount: existing.amount, // positive = reversing the credit
-          balanceAfter: Math.round(balanceAfter * 100) / 100,
-          description: `Payment of ₹${existing.amount} deleted`,
-          date: existing.date,
-        },
+      await supabase.from("LedgerEvent").insert({
+        customerId,
+        eventType: "delete",
+        referenceId: id,
+        amount: existing.amount, // positive = reversing the credit
+        balanceAfter: Math.round(balanceAfter * 100) / 100,
+        description: `Payment of ₹${existing.amount} deleted`,
+        date: existing.date,
       });
     } else {
       await recalcCustomerBalances(customerId);

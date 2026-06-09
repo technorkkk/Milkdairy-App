@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 // GET /api/audit?dairyId=...&entity=...&limit=...
 export async function GET(request: NextRequest) {
@@ -16,11 +16,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find all user IDs for this dairy (the dairy belongs to a user)
-    const dairy = await db.dairy.findUnique({
-      where: { id: dairyId },
-      select: { userId: true },
-    });
+    // Find the dairy to get the userId
+    const { data: dairy } = await supabase
+      .from("Dairy")
+      .select("userId")
+      .eq("id", dairyId)
+      .maybeSingle();
 
     if (!dairy) {
       return NextResponse.json(
@@ -31,20 +32,28 @@ export async function GET(request: NextRequest) {
 
     const limit = limitParam ? parseInt(limitParam, 10) : 100;
 
-    const where: Record<string, unknown> = {
-      userId: dairy.userId,
-    };
+    let query = supabase
+      .from("AuditLog")
+      .select("*")
+      .eq("userId", dairy.userId)
+      .order("timestamp", { ascending: false })
+      .limit(limit);
+
     if (entity) {
-      where.entity = entity;
+      query = query.eq("entity", entity);
     }
 
-    const auditLogs = await db.auditLog.findMany({
-      where,
-      orderBy: { timestamp: "desc" },
-      take: limit,
-    });
+    const { data: auditLogs, error } = await query;
 
-    return NextResponse.json(auditLogs);
+    if (error) {
+      console.error("GET /api/audit error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch audit logs" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(auditLogs || []);
   } catch (error) {
     console.error("GET /api/audit error:", error);
     return NextResponse.json(

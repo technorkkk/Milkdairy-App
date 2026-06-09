@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 // GET /api/milk-rates?dairyId=...
 export async function GET(request: NextRequest) {
@@ -14,13 +14,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const milkRates = await db.milkRate.findMany({
-      where: { dairyId },
-      orderBy: { effectiveFrom: "desc" },
-    });
+    const { data: milkRates, error } = await supabase
+      .from("MilkRate")
+      .select("*")
+      .eq("dairyId", dairyId)
+      .order("effectiveFrom", { ascending: false });
+
+    if (error) {
+      console.error("GET /api/milk-rates error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch milk rates" },
+        { status: 500 }
+      );
+    }
 
     // Round pricePerL
-    const result = milkRates.map((r) => ({
+    const result = (milkRates || []).map((r) => ({
       ...r,
       pricePerL: Math.round(r.pricePerL * 100) / 100,
     }));
@@ -50,15 +59,25 @@ export async function POST(request: NextRequest) {
 
     const roundedPricePerL = Math.round(pricePerL * 100) / 100;
 
-    const milkRate = await db.milkRate.create({
-      data: {
+    const { data: milkRate, error: insertError } = await supabase
+      .from("MilkRate")
+      .insert({
         dairyId,
         milkType,
         pricePerL: roundedPricePerL,
         shift: shift || "morning",
-        effectiveFrom: effectiveFrom ? new Date(effectiveFrom) : new Date(),
-      },
-    });
+        effectiveFrom: effectiveFrom ? new Date(effectiveFrom).toISOString() : new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("POST /api/milk-rates error:", insertError);
+      return NextResponse.json(
+        { error: "Failed to create milk rate" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       rate: {
@@ -88,7 +107,12 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const existing = await db.milkRate.findUnique({ where: { id } });
+    const { data: existing } = await supabase
+      .from("MilkRate")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
     if (!existing) {
       return NextResponse.json(
         { error: "Milk rate not found" },
@@ -102,12 +126,22 @@ export async function PUT(request: NextRequest) {
     if (pricePerL !== undefined)
       data.pricePerL = Math.round(pricePerL * 100) / 100;
     if (shift !== undefined) data.shift = shift;
-    if (effectiveFrom !== undefined) data.effectiveFrom = new Date(effectiveFrom);
+    if (effectiveFrom !== undefined) data.effectiveFrom = new Date(effectiveFrom).toISOString();
 
-    const milkRate = await db.milkRate.update({
-      where: { id },
-      data,
-    });
+    const { data: milkRate, error: updateError } = await supabase
+      .from("MilkRate")
+      .update(data)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("PUT /api/milk-rates error:", updateError);
+      return NextResponse.json(
+        { error: "Failed to update milk rate" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       rate: {
@@ -137,7 +171,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const existing = await db.milkRate.findUnique({ where: { id } });
+    const { data: existing } = await supabase
+      .from("MilkRate")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
     if (!existing) {
       return NextResponse.json(
         { error: "Milk rate not found" },
@@ -145,7 +184,18 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await db.milkRate.delete({ where: { id } });
+    const { error: deleteError } = await supabase
+      .from("MilkRate")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      console.error("DELETE /api/milk-rates error:", deleteError);
+      return NextResponse.json(
+        { error: "Failed to delete milk rate" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true, deletedId: id });
   } catch (error) {

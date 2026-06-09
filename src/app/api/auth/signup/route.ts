@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
+import { hashPassword } from '@/lib/password';
 
 export async function POST(request: Request) {
   try {
@@ -15,9 +16,19 @@ export async function POST(request: Request) {
     }
 
     // Check if email already exists
-    const existingUser = await db.user.findUnique({
-      where: { email },
-    });
+    const { data: existingUser, error: lookupError } = await supabase
+      .from('User')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (lookupError) {
+      console.error('Signup lookup error:', lookupError);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
 
     if (existingUser) {
       return NextResponse.json(
@@ -26,38 +37,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash password
-    let hashedPassword: string;
-    try {
-      hashedPassword = await Bun.password.hash(password);
-    } catch {
-      // Fallback: use a basic hash if Bun.password is unavailable
-      const encoder = new TextEncoder();
-      const data = encoder.encode(password);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      hashedPassword = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-    }
+    // Hash password using PBKDF2 (works on Node.js and Bun)
+    const hashedPassword = await hashPassword(password);
 
     // Create user
-    const user = await db.user.create({
-      data: {
+    const { data: user, error: insertError } = await supabase
+      .from('User')
+      .insert({
         name,
         email,
         password: hashedPassword,
         phone: phone || null,
-      },
-    });
+      })
+      .select('id, email, name, phone')
+      .single();
+
+    if (insertError) {
+      console.error('Signup insert error:', insertError);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
-      {
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          phone: user.phone,
-        },
-      },
+      { user },
       { status: 201 }
     );
   } catch (error) {

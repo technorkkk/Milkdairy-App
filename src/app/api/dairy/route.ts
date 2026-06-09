@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 // GET /api/dairy?userId=xxx — Get dairies for a user
 export async function GET(request: Request) {
@@ -15,25 +15,36 @@ export async function GET(request: Request) {
     }
 
     // Verify user exists
-    const user = await db.user.findUnique({
-      where: { id: userId },
-    });
+    const { data: user, error: userError } = await supabase
+      .from('User')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
 
-    if (!user) {
+    if (userError || !user) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       );
     }
 
-    const dairies = await db.dairy.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { data: dairies, error: dairyError } = await supabase
+      .from('Dairy')
+      .select('*')
+      .eq('userId', userId)
+      .order('createdAt', { ascending: false });
+
+    if (dairyError) {
+      console.error('Get dairies error:', dairyError);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
 
     // Return the first (most recent) dairy as "dairy" for client compatibility
-    const dairy = dairies.length > 0 ? dairies[0] : null;
-    return NextResponse.json({ dairy, dairies });
+    const dairy = dairies && dairies.length > 0 ? dairies[0] : null;
+    return NextResponse.json({ dairy, dairies: dairies || [] });
   } catch (error) {
     console.error('Get dairies error:', error);
     return NextResponse.json(
@@ -58,26 +69,38 @@ export async function POST(request: Request) {
     }
 
     // Verify user exists
-    const user = await db.user.findUnique({
-      where: { id: userId },
-    });
+    const { data: user, error: userError } = await supabase
+      .from('User')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
 
-    if (!user) {
+    if (userError || !user) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       );
     }
 
-    const dairy = await db.dairy.create({
-      data: {
+    const { data: dairy, error: insertError } = await supabase
+      .from('Dairy')
+      .insert({
         name,
         address: address || null,
         phone: phone || null,
         ownerName,
         userId,
-      },
-    });
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Create dairy error:', insertError);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ dairy }, { status: 201 });
   } catch (error) {
@@ -103,11 +126,13 @@ export async function PUT(request: Request) {
     }
 
     // Verify dairy exists
-    const existing = await db.dairy.findUnique({
-      where: { id },
-    });
+    const { data: existing, error: lookupError } = await supabase
+      .from('Dairy')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
 
-    if (!existing) {
+    if (lookupError || !existing) {
       return NextResponse.json(
         { error: 'Dairy not found' },
         { status: 404 }
@@ -121,10 +146,20 @@ export async function PUT(request: Request) {
     if (phone !== undefined) updateData.phone = phone;
     if (ownerName !== undefined) updateData.ownerName = ownerName;
 
-    const dairy = await db.dairy.update({
-      where: { id },
-      data: updateData,
-    });
+    const { data: dairy, error: updateError } = await supabase
+      .from('Dairy')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Update dairy error:', updateError);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ dairy });
   } catch (error) {

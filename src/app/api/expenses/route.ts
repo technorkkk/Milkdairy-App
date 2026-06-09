@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 // GET /api/expenses?dairyId=...&dateFrom=...&dateTo=...
 export async function GET(request: NextRequest) {
@@ -16,21 +16,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build date filter
-    const dateFilter: Record<string, string> = {};
-    if (dateFrom) dateFilter.gte = dateFrom;
-    if (dateTo) dateFilter.lte = dateTo;
+    // Build query for expenses
+    let query = supabase
+      .from("Expense")
+      .select("*")
+      .eq("dairyId", dairyId)
+      .order("date", { ascending: false });
 
-    const expenses = await db.expense.findMany({
-      where: {
-        dairyId,
-        ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
-      },
-      orderBy: { date: "desc" },
-    });
+    if (dateFrom) {
+      query = query.gte("date", dateFrom);
+    }
+    if (dateTo) {
+      query = query.lte("date", dateTo);
+    }
+
+    const { data: expenses, error } = await query;
+
+    if (error) {
+      console.error("GET /api/expenses error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch expenses" },
+        { status: 500 }
+      );
+    }
 
     // Round amounts
-    const result = expenses.map((e) => ({
+    const result = (expenses || []).map((e) => ({
       ...e,
       amount: Math.round(e.amount * 100) / 100,
     }));
@@ -60,16 +71,26 @@ export async function POST(request: NextRequest) {
 
     const roundedAmount = Math.round(amount * 100) / 100;
 
-    const expense = await db.expense.create({
-      data: {
+    const { data: expense, error: insertError } = await supabase
+      .from("Expense")
+      .insert({
         dairyId,
         category,
         amount: roundedAmount,
         description: description || null,
         date,
         synced: synced !== undefined ? synced : true,
-      },
-    });
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("POST /api/expenses error:", insertError);
+      return NextResponse.json(
+        { error: "Failed to create expense" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       ...expense,
@@ -97,7 +118,12 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const existing = await db.expense.findUnique({ where: { id } });
+    const { data: existing } = await supabase
+      .from("Expense")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
     if (!existing) {
       return NextResponse.json(
         { error: "Expense not found" },
@@ -113,10 +139,20 @@ export async function PUT(request: NextRequest) {
     if (date !== undefined) data.date = date;
     if (synced !== undefined) data.synced = synced;
 
-    const expense = await db.expense.update({
-      where: { id },
-      data,
-    });
+    const { data: expense, error: updateError } = await supabase
+      .from("Expense")
+      .update(data)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("PUT /api/expenses error:", updateError);
+      return NextResponse.json(
+        { error: "Failed to update expense" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       ...expense,
@@ -144,7 +180,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const existing = await db.expense.findUnique({ where: { id } });
+    const { data: existing } = await supabase
+      .from("Expense")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
     if (!existing) {
       return NextResponse.json(
         { error: "Expense not found" },
@@ -152,7 +193,18 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await db.expense.delete({ where: { id } });
+    const { error: deleteError } = await supabase
+      .from("Expense")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      console.error("DELETE /api/expenses error:", deleteError);
+      return NextResponse.json(
+        { error: "Failed to delete expense" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true, deletedId: id });
   } catch (error) {

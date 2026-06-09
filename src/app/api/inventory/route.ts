@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 // GET /api/inventory?dairyId=...
 export async function GET(request: NextRequest) {
@@ -14,13 +14,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const items = await db.inventoryItem.findMany({
-      where: { dairyId },
-      orderBy: { name: "asc" },
-    });
+    const { data: items, error } = await supabase
+      .from("InventoryItem")
+      .select("*")
+      .eq("dairyId", dairyId)
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("GET /api/inventory error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch inventory items" },
+        { status: 500 }
+      );
+    }
 
     // Round numeric values
-    const result = items.map((item) => ({
+    const result = (items || []).map((item) => ({
       ...item,
       quantity: Math.round(item.quantity * 100) / 100,
       minStock: Math.round(item.minStock * 100) / 100,
@@ -59,8 +68,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const item = await db.inventoryItem.create({
-      data: {
+    const { data: item, error: insertError } = await supabase
+      .from("InventoryItem")
+      .insert({
         dairyId,
         name,
         category,
@@ -68,9 +78,18 @@ export async function POST(request: NextRequest) {
         unit: unit || "litre",
         minStock: Math.round((minStock ?? 0) * 100) / 100,
         pricePerUnit: Math.round((pricePerUnit ?? 0) * 100) / 100,
-        lastRestocked: lastRestocked ? new Date(lastRestocked) : null,
-      },
-    });
+        lastRestocked: lastRestocked ? new Date(lastRestocked).toISOString() : null,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("POST /api/inventory error:", insertError);
+      return NextResponse.json(
+        { error: "Failed to create inventory item" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       ...item,
@@ -110,7 +129,12 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const existing = await db.inventoryItem.findUnique({ where: { id } });
+    const { data: existing } = await supabase
+      .from("InventoryItem")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
     if (!existing) {
       return NextResponse.json(
         { error: "Inventory item not found" },
@@ -130,12 +154,22 @@ export async function PUT(request: NextRequest) {
     if (pricePerUnit !== undefined)
       data.pricePerUnit = Math.round(pricePerUnit * 100) / 100;
     if (lastRestocked !== undefined)
-      data.lastRestocked = lastRestocked ? new Date(lastRestocked) : null;
+      data.lastRestocked = lastRestocked ? new Date(lastRestocked).toISOString() : null;
 
-    const item = await db.inventoryItem.update({
-      where: { id },
-      data,
-    });
+    const { data: item, error: updateError } = await supabase
+      .from("InventoryItem")
+      .update(data)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("PUT /api/inventory error:", updateError);
+      return NextResponse.json(
+        { error: "Failed to update inventory item" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       ...item,
@@ -165,7 +199,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const existing = await db.inventoryItem.findUnique({ where: { id } });
+    const { data: existing } = await supabase
+      .from("InventoryItem")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
     if (!existing) {
       return NextResponse.json(
         { error: "Inventory item not found" },
@@ -173,7 +212,18 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await db.inventoryItem.delete({ where: { id } });
+    const { error: deleteError } = await supabase
+      .from("InventoryItem")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      console.error("DELETE /api/inventory error:", deleteError);
+      return NextResponse.json(
+        { error: "Failed to delete inventory item" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true, deletedId: id });
   } catch (error) {
