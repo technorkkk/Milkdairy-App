@@ -512,6 +512,8 @@ function AddCustomerForm({
 
   const onSubmit = async (data: CustomerInput) => {
     if (!dairy?.id) return;
+    // Guard: prevent double submission
+    if (submitting) return;
     setSubmitting(true);
     clearError();
     try {

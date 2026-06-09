@@ -119,6 +119,26 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check for duplicate customer (same name + phone in same dairy)
+    const duplicateQuery = supabase
+      .from("Customer")
+      .select("id")
+      .eq("dairyId", dairyId)
+      .eq("name", name);
+
+    if (phone) {
+      duplicateQuery.eq("phone", phone);
+    }
+
+    const { data: existingCustomer } = await duplicateQuery.maybeSingle();
+
+    if (existingCustomer) {
+      return NextResponse.json(
+        { error: "A customer with this name already exists in this dairy" },
+        { status: 409 }
+      );
+    }
+
     const { data: customer, error: insertError } = await supabase
       .from("Customer")
       .insert({
