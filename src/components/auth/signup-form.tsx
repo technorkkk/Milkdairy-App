@@ -82,7 +82,24 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
           </div>
 
           {error && (
-            <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">{error}</div>
+            <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+              {error.includes("Internal server error") ? (
+                <div className="space-y-2">
+                  <p>Database tables not set up yet.</p>
+                  <p className="text-xs">Please run the SQL migration in your Supabase SQL Editor first.</p>
+                  <a
+                    href="https://supabase.com/dashboard/project/qrgsabeyzkcxkfeuhfuy/sql"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-xs underline text-blue-600 hover:text-blue-800"
+                  >
+                    Open Supabase SQL Editor →
+                  </a>
+                </div>
+              ) : (
+                error
+              )}
+            </div>
           )}
 
           <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={loading}>
