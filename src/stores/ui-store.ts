@@ -62,9 +62,14 @@ export const useUIStore = create<UIState>()(
     {
       name: "dairy-ledger-ui",
       partialize: (state) => ({
-        currentView: state.currentView,
-        selectedDate: state.selectedDate,
+        currentView: state.currentView === "customer-detail" ? "customers" : state.currentView,
         selectedShift: state.selectedShift,
+      }),
+      // Always reset selectedDate to today on rehydration to avoid stale dates
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Partial<UIState>),
+        selectedDate: new Date().toISOString().split("T")[0],
       }),
     }
   )

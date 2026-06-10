@@ -49,12 +49,12 @@ export const useCustomerStore = create<CustomerState>()(
           const res = await fetch(`/api/customers?dairyId=${dairyId}`);
           const data = await res.json();
           if (res.ok) {
-            set({ customers: data.customers || [], isLoading: false });
+            set({ customers: data.customers || [], isLoading: false, error: null });
           } else {
-            set({ isLoading: false });
+            set({ isLoading: false, error: data.error || "Failed to load customers" });
           }
-        } catch {
-          set({ isLoading: false });
+        } catch (error) {
+          set({ isLoading: false, error: error instanceof Error ? error.message : "Failed to load customers" });
         }
       },
 
@@ -75,7 +75,7 @@ export const useCustomerStore = create<CustomerState>()(
           }));
           return newCustomer;
         } catch (error) {
-          set({ error: error instanceof Error ? error.message : "Failed", isLoading: false });
+          set({ error: error instanceof Error ? error.message : "Failed to add customer", isLoading: false });
           throw error;
         }
       },
@@ -95,6 +95,7 @@ export const useCustomerStore = create<CustomerState>()(
             ),
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to update customer" });
           throw error;
         }
       },
@@ -107,6 +108,7 @@ export const useCustomerStore = create<CustomerState>()(
             customers: state.customers.filter((c) => c.id !== id),
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to delete customer" });
           throw error;
         }
       },

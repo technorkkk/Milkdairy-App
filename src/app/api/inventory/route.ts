@@ -129,11 +129,12 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { data: existing } = await supabase
+    const { data: existing, error: lookupError } = await supabase
       .from("InventoryItem")
       .select("id")
       .eq("id", id)
       .maybeSingle();
+    if (lookupError) { console.error("PUT /api/inventory: error fetching inventory item", lookupError); }
 
     if (!existing) {
       return NextResponse.json(
@@ -199,11 +200,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { data: existing } = await supabase
+    const { data: existing, error: lookupError } = await supabase
       .from("InventoryItem")
       .select("id")
       .eq("id", id)
       .maybeSingle();
+    if (lookupError) { console.error("DELETE /api/inventory: error fetching inventory item", lookupError); }
 
     if (!existing) {
       return NextResponse.json(

@@ -118,11 +118,12 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { data: existing } = await supabase
+    const { data: existing, error: lookupError } = await supabase
       .from("Expense")
       .select("id")
       .eq("id", id)
       .maybeSingle();
+    if (lookupError) { console.error("PUT /api/expenses: error fetching expense", lookupError); }
 
     if (!existing) {
       return NextResponse.json(
@@ -180,11 +181,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { data: existing } = await supabase
+    const { data: existing, error: lookupError } = await supabase
       .from("Expense")
       .select("id")
       .eq("id", id)
       .maybeSingle();
+    if (lookupError) { console.error("DELETE /api/expenses: error fetching expense", lookupError); }
 
     if (!existing) {
       return NextResponse.json(

@@ -17,9 +17,11 @@ interface DairyState {
   dairy: Dairy | null;
   isSetup: boolean;
   isLoading: boolean;
+  error: string | null;
   loadDairy: (userId: string) => Promise<void>;
   setupDairy: (data: { name: string; address?: string; phone?: string; ownerName: string; userId: string }) => Promise<void>;
   updateDairy: (data: Partial<Dairy>) => Promise<void>;
+  clearError: () => void;
 }
 
 export const useDairyStore = create<DairyState>()(
@@ -28,6 +30,7 @@ export const useDairyStore = create<DairyState>()(
       dairy: null,
       isSetup: false,
       isLoading: false,
+      error: null,
 
       loadDairy: async (userId: string) => {
         set({ isLoading: true });
@@ -35,12 +38,12 @@ export const useDairyStore = create<DairyState>()(
           const res = await fetch(`/api/dairy?userId=${userId}`);
           const data = await res.json();
           if (res.ok && data.dairy) {
-            set({ dairy: data.dairy, isSetup: true, isLoading: false });
+            set({ dairy: data.dairy, isSetup: true, isLoading: false, error: null });
           } else {
-            set({ isSetup: false, isLoading: false });
+            set({ isSetup: false, isLoading: false, error: data.error || "Failed to load dairy" });
           }
-        } catch {
-          set({ isLoading: false });
+        } catch (error) {
+          set({ isLoading: false, error: error instanceof Error ? error.message : "Failed to load dairy" });
         }
       },
 
@@ -56,10 +59,12 @@ export const useDairyStore = create<DairyState>()(
           if (!res.ok) throw new Error(result.error || "Setup failed");
           set({ dairy: result.dairy, isSetup: true, isLoading: false });
         } catch (error) {
-          set({ isLoading: false });
+          set({ isLoading: false, error: error instanceof Error ? error.message : "Failed to setup dairy" });
           throw error;
         }
       },
+
+      clearError: () => set({ error: null }),
 
       updateDairy: async (data) => {
         try {
@@ -72,6 +77,7 @@ export const useDairyStore = create<DairyState>()(
           if (!res.ok) throw new Error(result.error || "Update failed");
           set({ dairy: result.dairy });
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to update dairy" });
           throw error;
         }
       },

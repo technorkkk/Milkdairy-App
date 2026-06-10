@@ -44,12 +44,12 @@ export const usePaymentStore = create<PaymentState>()(
           const res = await fetch(url);
           const data = await res.json();
           if (res.ok) {
-            set({ payments: data.payments || [], isLoading: false });
+            set({ payments: data.payments || [], isLoading: false, error: null });
           } else {
-            set({ isLoading: false });
+            set({ isLoading: false, error: data.error || "Failed to load payments" });
           }
-        } catch {
-          set({ isLoading: false });
+        } catch (error) {
+          set({ isLoading: false, error: error instanceof Error ? error.message : "Failed to load payments" });
         }
       },
 
@@ -68,6 +68,7 @@ export const usePaymentStore = create<PaymentState>()(
           }));
           return newPayment;
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to add payment" });
           throw error;
         }
       },
@@ -87,6 +88,7 @@ export const usePaymentStore = create<PaymentState>()(
             ),
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to update payment" });
           throw error;
         }
       },
@@ -99,6 +101,7 @@ export const usePaymentStore = create<PaymentState>()(
             payments: state.payments.filter((p) => p.id !== id),
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to delete payment" });
           throw error;
         }
       },

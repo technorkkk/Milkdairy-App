@@ -50,12 +50,12 @@ export const useDeliveryStore = create<DeliveryState>()(
           const res = await fetch(url);
           const data = await res.json();
           if (res.ok) {
-            set({ deliveries: data.deliveries || [], isLoading: false });
+            set({ deliveries: data.deliveries || [], isLoading: false, error: null });
           } else {
-            set({ isLoading: false });
+            set({ isLoading: false, error: data.error || "Failed to load deliveries" });
           }
-        } catch {
-          set({ isLoading: false });
+        } catch (error) {
+          set({ isLoading: false, error: error instanceof Error ? error.message : "Failed to load deliveries" });
         }
       },
 
@@ -75,6 +75,7 @@ export const useDeliveryStore = create<DeliveryState>()(
           }));
           return newDelivery;
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to add delivery" });
           throw error;
         }
       },
@@ -98,6 +99,7 @@ export const useDeliveryStore = create<DeliveryState>()(
           }));
           return result.count as number;
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to create bulk deliveries" });
           throw error;
         }
       },
@@ -117,6 +119,7 @@ export const useDeliveryStore = create<DeliveryState>()(
             ),
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to update delivery" });
           throw error;
         }
       },
@@ -156,6 +159,7 @@ export const useDeliveryStore = create<DeliveryState>()(
             deliveries: state.deliveries.filter((d) => d.id !== id),
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to delete delivery" });
           throw error;
         }
       },

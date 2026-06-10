@@ -7,11 +7,12 @@ import { roundTo2, reconcileAccount } from "@/lib/accounting";
  * based on all their deliveries and payments.
  */
 async function recalculateCustomerBalances(customerId: string) {
-  const { data: customer } = await supabase
+  const { data: customer, error: customerError } = await supabase
     .from("Customer")
     .select("id, billingType, openingBalance")
     .eq("id", customerId)
-    .single();
+    .maybeSingle();
+  if (customerError) { console.error("recalculateCustomerBalances: error fetching customer", customerError); }
 
   if (!customer) return;
 
@@ -158,11 +159,12 @@ export async function POST(request: Request) {
     }
 
     // Verify customer exists
-    const { data: customer } = await supabase
+    const { data: customer, error: customerLookupError } = await supabase
       .from("Customer")
       .select("id, billingType")
       .eq("id", customerId)
       .maybeSingle();
+    if (customerLookupError) { console.error("POST /api/deliveries: error fetching customer", customerLookupError); }
 
     if (!customer) {
       return NextResponse.json(
@@ -247,11 +249,12 @@ export async function PUT(request: Request) {
       );
     }
 
-    const { data: existingDelivery } = await supabase
+    const { data: existingDelivery, error: lookupError } = await supabase
       .from("Delivery")
       .select("*")
       .eq("id", id)
-      .single();
+      .maybeSingle();
+    if (lookupError) { console.error("PUT /api/deliveries: error fetching delivery", lookupError); }
 
     if (!existingDelivery) {
       return NextResponse.json(
@@ -301,11 +304,12 @@ export async function PUT(request: Request) {
     const result = await recalculateCustomerBalances(existingDelivery.customerId);
 
     // Update ledger event balanceAfter
-    const { data: customer } = await supabase
+    const { data: customer, error: customerError } = await supabase
       .from("Customer")
       .select("billingType")
       .eq("id", existingDelivery.customerId)
-      .single();
+      .maybeSingle();
+    if (customerError) { console.error("PUT /api/deliveries: error fetching customer billingType", customerError); }
 
     if (customer && result) {
       const balanceAfter =
@@ -320,11 +324,12 @@ export async function PUT(request: Request) {
         .eq("eventType", "delivery");
     }
 
-    const { data: updatedDelivery } = await supabase
+    const { data: updatedDelivery, error: fetchError } = await supabase
       .from("Delivery")
       .select("*")
       .eq("id", id)
-      .single();
+      .maybeSingle();
+    if (fetchError) { console.error("PUT /api/deliveries: error fetching updated delivery", fetchError); }
 
     return NextResponse.json({ delivery: updatedDelivery });
   } catch (error) {
@@ -348,11 +353,12 @@ async function bulkCreateDeliveries(body: {
 }) {
   const { customerId, startDate, absentDates, shift, milkType, pricePerL, defaultQuantity } = body;
 
-  const { data: customer } = await supabase
+  const { data: customer, error: customerError } = await supabase
     .from("Customer")
     .select("id")
     .eq("id", customerId)
-    .single();
+    .maybeSingle();
+  if (customerError) { console.error("bulkCreateDeliveries: error fetching customer", customerError); }
   if (!customer) throw new Error("Customer not found");
 
   const today = new Date().toISOString().split("T")[0];
@@ -378,13 +384,14 @@ async function bulkCreateDeliveries(body: {
 
     for (const s of shifts) {
       // Check if delivery already exists for this date+shift
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from("Delivery")
         .select("id")
         .eq("customerId", customerId)
         .eq("date", dateStr)
         .eq("shift", s)
         .maybeSingle();
+      if (existingError) { console.error("bulkCreateDeliveries: error checking existing delivery", existingError); }
 
       if (existing) continue; // Skip if already exists
 
@@ -446,11 +453,12 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const { data: existingDelivery } = await supabase
+    const { data: existingDelivery, error: lookupError } = await supabase
       .from("Delivery")
       .select("id, customerId")
       .eq("id", id)
       .maybeSingle();
+    if (lookupError) { console.error("DELETE /api/deliveries: error fetching delivery", lookupError); }
 
     if (!existingDelivery) {
       return NextResponse.json(

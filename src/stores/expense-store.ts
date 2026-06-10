@@ -42,12 +42,12 @@ export const useExpenseStore = create<ExpenseState>()(
           const res = await fetch(url);
           const data = await res.json();
           if (res.ok) {
-            set({ expenses: data.expenses || [], isLoading: false });
+            set({ expenses: data.expenses || [], isLoading: false, error: null });
           } else {
-            set({ isLoading: false });
+            set({ isLoading: false, error: data.error || "Failed to load expenses" });
           }
-        } catch {
-          set({ isLoading: false });
+        } catch (error) {
+          set({ isLoading: false, error: error instanceof Error ? error.message : "Failed to load expenses" });
         }
       },
 
@@ -64,6 +64,7 @@ export const useExpenseStore = create<ExpenseState>()(
             expenses: [...state.expenses, result.expense],
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to add expense" });
           throw error;
         }
       },
@@ -83,6 +84,7 @@ export const useExpenseStore = create<ExpenseState>()(
             ),
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to update expense" });
           throw error;
         }
       },
@@ -95,6 +97,7 @@ export const useExpenseStore = create<ExpenseState>()(
             expenses: state.expenses.filter((e) => e.id !== id),
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to delete expense" });
           throw error;
         }
       },

@@ -44,9 +44,9 @@ export const deliverySchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
   date: z.string().min(1, "Date is required"),
   shift: z.enum(["morning", "evening"]),
-  quantity: z.coerce.number().positive("Quantity must be positive"),
+  quantity: z.coerce.number().min(0, "Quantity must be 0 or more"),
   milkType: z.enum(["cow", "buffalo", "mixed"]),
-  pricePerL: z.coerce.number().positive("Price must be positive"),
+  pricePerL: z.coerce.number().min(0, "Price must be 0 or more"),
   status: z.enum(["delivered", "skipped", "cancelled"]).default("delivered"),
   notes: z.string().optional(),
 });

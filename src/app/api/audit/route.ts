@@ -30,7 +30,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const limit = limitParam ? parseInt(limitParam, 10) : 100;
+    const parsedLimit = limitParam ? parseInt(limitParam, 10) : 100;
+    const limit = !isNaN(parsedLimit) && parsedLimit > 0 && parsedLimit <= 1000 ? parsedLimit : 100;
 
     let query = supabase
       .from("AuditLog")

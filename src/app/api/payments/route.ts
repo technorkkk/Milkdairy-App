@@ -1,64 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { roundTo2 } from "@/lib/accounting";
+import { roundTo2, reconcileAccount } from "@/lib/accounting";
 
 /**
- * Helper: recalculate a customer's walletBalance and totalOutstanding.
+ * Helper: recalculate a customer's walletBalance and totalOutstanding
+ * using the shared reconcileAccount() for consistency.
  */
 async function recalcCustomerBalances(customerId: string) {
   const { data: customer } = await supabase
     .from("Customer")
     .select("id, billingType, openingBalance")
     .eq("id", customerId)
-    .single();
+    .maybeSingle();
 
   if (!customer) return;
 
   const { data: deliveries } = await supabase
     .from("Delivery")
     .select("quantity, pricePerL")
-    .eq("customerId", customerId)
-    .eq("status", "delivered");
+    .eq("customerId", customerId);
 
   const { data: payments } = await supabase
     .from("Payment")
     .select("amount")
     .eq("customerId", customerId);
 
-  const totalDeliveriesCost = (deliveries || []).reduce(
-    (sum, d) => sum + d.quantity * d.pricePerL,
-    0
+  const result = reconcileAccount(
+    customer.billingType as "prepaid" | "postpaid",
+    customer.openingBalance,
+    deliveries || [],
+    payments || []
   );
-  const totalPayments = (payments || []).reduce((sum, p) => sum + p.amount, 0);
-
-  let walletBalance = 0;
-  let totalOutstanding = 0;
-
-  if (customer.billingType === "prepaid") {
-    walletBalance =
-      Math.round((totalPayments + customer.openingBalance - totalDeliveriesCost) * 100) /
-      100;
-    totalOutstanding = 0;
-  } else {
-    totalOutstanding =
-      Math.max(
-        0,
-        Math.round(
-          (totalDeliveriesCost + customer.openingBalance - totalPayments) * 100
-        ) / 100
-      );
-    walletBalance = 0;
-  }
-
-  walletBalance = Math.round(walletBalance * 100) / 100;
-  totalOutstanding = Math.round(totalOutstanding * 100) / 100;
 
   await supabase
     .from("Customer")
-    .update({ walletBalance, totalOutstanding })
+    .update({
+      walletBalance: result.walletBalance,
+      totalOutstanding: result.totalOutstanding,
+    })
     .eq("id", customerId);
 
-  return { walletBalance, totalOutstanding };
+  return result;
 }
 
 // GET /api/payments?dairyId=...&dateFrom=...&dateTo=...
@@ -115,7 +97,7 @@ export async function GET(request: NextRequest) {
     // Round amounts
     const result = (payments || []).map((p) => ({
       ...p,
-      amount: Math.round(p.amount * 100) / 100,
+      amount: roundTo2(p.amount),
     }));
 
     return NextResponse.json(result);
@@ -142,7 +124,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const roundedAmount = Math.round(amount * 100) / 100;
+    if (typeof amount !== "number" || amount <= 0) {
+      return NextResponse.json(
+        { error: "Amount must be a positive number" },
+        { status: 400 }
+      );
+    }
+
+    const roundedAmount = roundTo2(amount);
+
+    // Verify customer exists
+    const { data: customer } = await supabase
+      .from("Customer")
+      .select("id, billingType")
+      .eq("id", customerId)
+      .maybeSingle();
+
+    if (!customer) {
+      return NextResponse.json(
+        { error: "Customer not found" },
+        { status: 404 }
+      );
+    }
 
     // Create the payment
     const { data: payment, error: insertError } = await supabase
@@ -167,35 +170,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Recalculate balances
+    const balances = await recalcCustomerBalances(customerId);
+    const balanceAfter =
+      customer.billingType === "prepaid"
+        ? balances?.walletBalance ?? 0
+        : balances?.totalOutstanding ?? 0;
+
     // Create a ledger event (negative amount = credit)
-    const { data: customer } = await supabase
-      .from("Customer")
-      .select("id, billingType")
-      .eq("id", customerId)
-      .single();
-
-    if (customer) {
-      // Get current balance for balanceAfter
-      const balances = await recalcCustomerBalances(customerId);
-      const balanceAfter =
-        customer.billingType === "prepaid"
-          ? balances?.walletBalance ?? 0
-          : balances?.totalOutstanding ?? 0;
-
-      await supabase.from("LedgerEvent").insert({
-        customerId,
-        eventType: "payment",
-        referenceId: payment.id,
-        amount: -roundedAmount, // negative for credit
-        balanceAfter: Math.round(balanceAfter * 100) / 100,
-        description: `Payment of ₹${roundedAmount} via ${paymentMode || "cash"}`,
-        date,
-      });
-    }
+    await supabase.from("LedgerEvent").insert({
+      customerId,
+      eventType: "payment",
+      referenceId: payment.id,
+      amount: -roundedAmount, // negative for credit
+      balanceAfter: roundTo2(balanceAfter),
+      description: `Payment of ₹${roundedAmount} via ${paymentMode || "cash"}`,
+      date,
+    });
 
     return NextResponse.json({
       ...payment,
-      amount: Math.round(payment.amount * 100) / 100,
+      amount: roundTo2(payment.amount),
     });
   } catch (error) {
     console.error("POST /api/payments error:", error);
@@ -210,8 +205,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, customerId, amount, paymentMode, date, notes, receiptNo, synced } =
-      body;
+    const { id, amount, paymentMode, date, notes, receiptNo, synced } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -224,7 +218,7 @@ export async function PUT(request: NextRequest) {
       .from("Payment")
       .select("*")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     if (!existing) {
       return NextResponse.json(
@@ -234,12 +228,20 @@ export async function PUT(request: NextRequest) {
     }
 
     const data: Record<string, unknown> = {};
-    if (amount !== undefined) data.amount = Math.round(amount * 100) / 100;
+    if (amount !== undefined) data.amount = roundTo2(amount);
     if (paymentMode !== undefined) data.paymentMode = paymentMode;
     if (date !== undefined) data.date = date;
     if (notes !== undefined) data.notes = notes;
     if (receiptNo !== undefined) data.receiptNo = receiptNo;
     if (synced !== undefined) data.synced = synced;
+
+    // Check if there's anything to update
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json(
+        { error: "No fields to update" },
+        { status: 400 }
+      );
+    }
 
     const { data: payment, error: updateError } = await supabase
       .from("Payment")
@@ -256,30 +258,29 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Recalculate balances for the affected customer
-    const targetCustomerId = customerId || existing.customerId;
-    await recalcCustomerBalances(targetCustomerId);
+    // Recalculate balances for the customer (single recalculation, not double)
+    const customerId = existing.customerId;
+    const balances = await recalcCustomerBalances(customerId);
 
     // Create an edit ledger event
     const { data: customer } = await supabase
       .from("Customer")
       .select("billingType")
-      .eq("id", targetCustomerId)
-      .single();
+      .eq("id", customerId)
+      .maybeSingle();
 
-    if (customer) {
-      const updatedBalances = await recalcCustomerBalances(targetCustomerId);
+    if (customer && balances) {
       const balanceAfter =
         customer.billingType === "prepaid"
-          ? updatedBalances?.walletBalance ?? 0
-          : updatedBalances?.totalOutstanding ?? 0;
+          ? balances.walletBalance
+          : balances.totalOutstanding;
 
       await supabase.from("LedgerEvent").insert({
-        customerId: targetCustomerId,
+        customerId,
         eventType: "edit",
         referenceId: id,
         amount: -((data.amount as number) ?? existing.amount),
-        balanceAfter: Math.round(balanceAfter * 100) / 100,
+        balanceAfter: roundTo2(balanceAfter),
         description: `Payment updated`,
         date: payment.date,
       });
@@ -287,7 +288,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       ...payment,
-      amount: Math.round(payment.amount * 100) / 100,
+      amount: roundTo2(payment.amount),
     });
   } catch (error) {
     console.error("PUT /api/payments error:", error);
@@ -315,7 +316,7 @@ export async function DELETE(request: NextRequest) {
       .from("Payment")
       .select("*")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     if (!existing) {
       return NextResponse.json(
@@ -331,7 +332,7 @@ export async function DELETE(request: NextRequest) {
       .from("Customer")
       .select("id, billingType")
       .eq("id", customerId)
-      .single();
+      .maybeSingle();
 
     // Delete the payment
     const { error: deleteError } = await supabase
@@ -347,25 +348,25 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Recalculate balances
-    if (customer) {
-      const updatedBalances = await recalcCustomerBalances(customerId);
+    // Recalculate balances after deletion
+    const balances = await recalcCustomerBalances(customerId);
+
+    // Create a delete ledger event
+    if (customer && balances) {
       const balanceAfter =
         customer.billingType === "prepaid"
-          ? updatedBalances?.walletBalance ?? 0
-          : updatedBalances?.totalOutstanding ?? 0;
+          ? balances.walletBalance
+          : balances.totalOutstanding;
 
       await supabase.from("LedgerEvent").insert({
         customerId,
         eventType: "delete",
         referenceId: id,
         amount: existing.amount, // positive = reversing the credit
-        balanceAfter: Math.round(balanceAfter * 100) / 100,
+        balanceAfter: roundTo2(balanceAfter),
         description: `Payment of ₹${existing.amount} deleted`,
         date: existing.date,
       });
-    } else {
-      await recalcCustomerBalances(customerId);
     }
 
     return NextResponse.json({ success: true, deletedId: id });

@@ -59,12 +59,12 @@ export const useInventoryStore = create<InventoryState>()(
           const res = await fetch(`/api/milk-rates?dairyId=${dairyId}`);
           const data = await res.json();
           if (res.ok) {
-            set({ milkRates: data.rates || [], isLoading: false });
+            set({ milkRates: data.rates || [], isLoading: false, error: null });
           } else {
-            set({ isLoading: false });
+            set({ isLoading: false, error: data.error || "Failed to load milk rates" });
           }
-        } catch {
-          set({ isLoading: false });
+        } catch (error) {
+          set({ isLoading: false, error: error instanceof Error ? error.message : "Failed to load milk rates" });
         }
       },
 
@@ -81,6 +81,7 @@ export const useInventoryStore = create<InventoryState>()(
             milkRates: [...state.milkRates, result.rate],
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to add milk rate" });
           throw error;
         }
       },
@@ -100,6 +101,7 @@ export const useInventoryStore = create<InventoryState>()(
             ),
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to update milk rate" });
           throw error;
         }
       },
@@ -112,6 +114,7 @@ export const useInventoryStore = create<InventoryState>()(
             milkRates: state.milkRates.filter((r) => r.id !== id),
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to delete milk rate" });
           throw error;
         }
       },
@@ -134,12 +137,12 @@ export const useInventoryStore = create<InventoryState>()(
           const res = await fetch(`/api/inventory?dairyId=${dairyId}`);
           const data = await res.json();
           if (res.ok) {
-            set({ inventoryItems: data.items || [], isLoading: false });
+            set({ inventoryItems: data.items || [], isLoading: false, error: null });
           } else {
-            set({ isLoading: false });
+            set({ isLoading: false, error: data.error || "Failed to load inventory" });
           }
-        } catch {
-          set({ isLoading: false });
+        } catch (error) {
+          set({ isLoading: false, error: error instanceof Error ? error.message : "Failed to load inventory" });
         }
       },
 
@@ -156,6 +159,7 @@ export const useInventoryStore = create<InventoryState>()(
             inventoryItems: [...state.inventoryItems, result.item],
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to add inventory item" });
           throw error;
         }
       },
@@ -175,6 +179,7 @@ export const useInventoryStore = create<InventoryState>()(
             ),
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to update inventory item" });
           throw error;
         }
       },
@@ -187,6 +192,7 @@ export const useInventoryStore = create<InventoryState>()(
             inventoryItems: state.inventoryItems.filter((i) => i.id !== id),
           }));
         } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Failed to delete inventory item" });
           throw error;
         }
       },
