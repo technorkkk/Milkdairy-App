@@ -221,13 +221,13 @@ export function InvoiceBuilderView() {
             <div className="flex justify-between text-xs">
               <div>
                 <p className="font-semibold">{dairy?.name}</p>
-                <p className="text-foreground/60">{dairy?.address}</p>
-                <p className="text-foreground/60">{dairy?.phone}</p>
+                <p className="text-muted-foreground">{dairy?.address}</p>
+                <p className="text-muted-foreground">{dairy?.phone}</p>
               </div>
               <div className="text-right">
                 <p className="font-semibold">{selectedCustomer.name}</p>
-                <p className="text-foreground/60">{selectedCustomer.phone}</p>
-                <p className="text-foreground/60">{selectedCustomer.address}</p>
+                <p className="text-muted-foreground">{selectedCustomer.phone}</p>
+                <p className="text-muted-foreground">{selectedCustomer.address}</p>
               </div>
             </div>
 
@@ -236,7 +236,7 @@ export function InvoiceBuilderView() {
             {/* Delivery Items */}
             {invoiceItems.length > 0 && (
               <div className="space-y-1">
-                <p className="text-xs font-medium text-foreground/60">Delivery Items</p>
+                <p className="text-xs font-medium text-muted-foreground">Delivery Items</p>
                 {invoiceItems.map((item) => (
                   <div key={item.id} className="flex justify-between text-xs">
                     <span className="flex-1 truncate">{item.description}</span>
@@ -251,7 +251,7 @@ export function InvoiceBuilderView() {
             {/* Custom Items */}
             {customItems.length > 0 && (
               <div className="space-y-1">
-                <p className="text-xs font-medium text-foreground/60">Additional Items</p>
+                <p className="text-xs font-medium text-muted-foreground">Additional Items</p>
                 {customItems.map((item) => (
                   <div key={item.id} className="flex items-center gap-2">
                     <Input
@@ -309,7 +309,7 @@ export function InvoiceBuilderView() {
               </div>
               {totalPaid > 0 && (
                 <>
-                  <div className="flex justify-between text-foreground/60">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Payments Received</span>
                     <span>-{formatCurrency(totalPaid)}</span>
                   </div>

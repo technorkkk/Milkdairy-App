@@ -78,11 +78,13 @@ export function BottomNavBar() {
               <button
                 key={item.view}
                 onClick={() => handleNavClick(item.view)}
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex flex-col items-center justify-center gap-0.5 py-1 px-3 min-w-[56px] transition-colors",
                   active
                     ? "text-emerald-600"
-                    : "text-foreground/50 hover:text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground font-medium"
                 )}
               >
                 <Icon className={cn("w-5 h-5", active && "stroke-[2.5]")} />
@@ -109,6 +111,7 @@ export function BottomNavBar() {
                 <button
                   key={item.view}
                   onClick={() => handleMoreItemClick(item.view)}
+                  aria-label={item.label}
                   className={cn(
                     "flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-accent transition-colors",
                     active && "border-emerald-600 bg-emerald-50"

@@ -156,7 +156,7 @@ function DeliveryActionSheet({
         <div className="space-y-4 pt-2 pb-4">
           {/* Current Status */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-foreground/60">Status:</span>
+            <span className="text-sm text-muted-foreground">Status:</span>
             {isDelivered ? (
               <Badge className="bg-emerald-600 text-white text-xs border-0">
                 <CheckCircle2 className="size-3 mr-1" /> Delivered
@@ -166,7 +166,7 @@ function DeliveryActionSheet({
                 <SkipForward className="size-3 mr-1" /> Skipped
               </Badge>
             ) : (
-              <Badge variant="outline" className="text-xs text-foreground/60">
+              <Badge variant="outline" className="text-xs text-muted-foreground">
                 <Circle className="size-3 mr-1" /> Pending
               </Badge>
             )}
@@ -218,7 +218,7 @@ function DeliveryActionSheet({
               <p className="text-2xl font-bold text-center">{currentQty} L</p>
             )}
 
-            <div className="flex items-center justify-center gap-2 text-sm text-foreground/60">
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <span>{editQty}L × {formatCurrency(pricePerL)}/L</span>
               <span>=</span>
               <span className="font-semibold text-foreground">{formatCurrency(totalAmount)}</span>
@@ -599,7 +599,7 @@ export function DeliveryBoardView() {
           <p className="text-sm font-semibold text-foreground">
             {formatDate(selectedDate)}
           </p>
-          <p className="text-[11px] text-foreground/60">
+          <p className="text-[11px] text-muted-foreground">
             {selectedDate}
           </p>
         </div>
@@ -631,7 +631,7 @@ export function DeliveryBoardView() {
       {/* Search Bar */}
       {customers.length > 5 && (
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-foreground/60" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
             placeholder="Search customer..."
             value={searchQuery}
@@ -648,7 +648,7 @@ export function DeliveryBoardView() {
           className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all ${
             selectedShift === "morning"
               ? "bg-emerald-600 text-white shadow-sm"
-              : "text-foreground/60 hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <Sun className="w-4 h-4" />
@@ -659,7 +659,7 @@ export function DeliveryBoardView() {
           className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all ${
             selectedShift === "evening"
               ? "bg-emerald-600 text-white shadow-sm"
-              : "text-foreground/60 hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <Moon className="w-4 h-4" />
@@ -671,15 +671,15 @@ export function DeliveryBoardView() {
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-2.5 text-center">
           <p className="text-lg font-bold text-emerald-600">{deliveredCount}</p>
-          <p className="text-[10px] text-foreground/60 font-medium">Delivered</p>
+          <p className="text-[10px] text-muted-foreground font-medium">Delivered</p>
         </div>
         <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-2.5 text-center">
           <p className="text-lg font-bold text-amber-600">{skippedCount}</p>
-          <p className="text-[10px] text-foreground/60 font-medium">Absent</p>
+          <p className="text-[10px] text-muted-foreground font-medium">Absent</p>
         </div>
         <div className="rounded-xl bg-gray-50 dark:bg-gray-950/30 border border-gray-200 dark:border-gray-800 p-2.5 text-center">
           <p className="text-lg font-bold text-gray-600">{pendingCount}</p>
-          <p className="text-[10px] text-foreground/60 font-medium">Pending</p>
+          <p className="text-[10px] text-muted-foreground font-medium">Pending</p>
         </div>
       </div>
 
@@ -688,11 +688,11 @@ export function DeliveryBoardView() {
         <div className="flex items-center justify-between rounded-xl bg-card border px-3 py-2.5">
           <div className="flex items-center gap-4">
             <div className="text-center">
-              <p className="text-xs text-foreground/60">Total Qty</p>
+              <p className="text-xs text-muted-foreground">Total Qty</p>
               <p className="text-sm font-bold">{roundTo2(totalLitres)}L</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-foreground/60">Total Amt</p>
+              <p className="text-xs text-muted-foreground">Total Amt</p>
               <p className="text-sm font-bold flex items-center gap-0.5">
                 <IndianRupee className="size-3" />
                 {formatCurrency(totalAmount).replace(/^-/, "")}
@@ -700,7 +700,7 @@ export function DeliveryBoardView() {
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs text-foreground/60">{totalCount} customers</p>
+            <p className="text-xs text-muted-foreground">{totalCount} customers</p>
             <p className="text-sm font-semibold text-emerald-600">
               {deliveredCount}/{totalCount} done
             </p>
@@ -711,14 +711,14 @@ export function DeliveryBoardView() {
       {/* Loading indicator */}
       {deliveryLoading && (
         <div className="flex justify-center py-2">
-          <Loader2 className="w-5 h-5 text-foreground/60 animate-spin" />
+          <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
         </div>
       )}
 
       {/* "Mark All Delivered" button */}
       {pendingCount > 0 && (
         <Button
-          className="w-full btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
+          className="w-full btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/25"
           disabled={markingAll}
           onClick={() => setMarkAllDialogOpen(true)}
         >
@@ -735,7 +735,7 @@ export function DeliveryBoardView() {
       {filteredCustomers.length === 0 ? (
         <Card className="py-0 gap-0">
           <CardContent className="p-6 text-center">
-            <p className="text-sm text-foreground/60">
+            <p className="text-sm text-muted-foreground">
               No customers for this shift
             </p>
           </CardContent>
@@ -788,7 +788,7 @@ export function DeliveryBoardView() {
                           ) : isSkipped ? (
                             <SkipForward className="w-6 h-6 text-amber-500" />
                           ) : (
-                            <Circle className="w-6 h-6 text-foreground/60" />
+                            <Circle className="w-6 h-6 text-muted-foreground" />
                           )}
                         </motion.button>
 
@@ -809,7 +809,7 @@ export function DeliveryBoardView() {
                               {MILK_TYPES[customer.milkType] ?? customer.milkType}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-3 text-[12px] text-foreground/60">
+                          <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
                             <span>
                               {isSkipped ? "0L" : `${quantity}L`} ×{" "}
                               {formatCurrency(pricePerL).replace(/^-/, "")}
@@ -839,7 +839,7 @@ export function DeliveryBoardView() {
                           ) : (
                             <Badge
                               variant="outline"
-                              className="text-[10px] text-foreground/60"
+                              className="text-[10px] text-muted-foreground"
                             >
                               Pending
                             </Badge>
@@ -847,7 +847,7 @@ export function DeliveryBoardView() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="size-7 text-foreground/60 hover:text-foreground"
+                            className="size-7 text-muted-foreground hover:text-foreground"
                             onClick={() => handleOpenActions(customer)}
                           >
                             <Edit3 className="size-3.5" />

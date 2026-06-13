@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Building2 } from "lucide-react";
+import { Loader2, Building2, AlertCircle } from "lucide-react";
 
 export function DairySetupWizard() {
   const { setupDairy } = useDairyStore();
@@ -82,7 +82,13 @@ export function DairySetupWizard() {
             </div>
 
             {error && (
-              <div className="error-alert text-sm">{error}</div>
+              <div className="error-alert" role="alert" aria-live="assertive">
+                <AlertCircle className="w-4 h-4 error-alert-icon" />
+                <div>
+                  <p className="error-alert-title">Setup Failed</p>
+                  <p className="error-alert-desc">{error}</p>
+                </div>
+              </div>
             )}
 
             <Button type="submit" className="w-full btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20" disabled={loading}>

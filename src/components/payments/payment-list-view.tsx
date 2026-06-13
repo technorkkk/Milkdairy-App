@@ -201,7 +201,7 @@ export function PaymentListView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-foreground">Payments</h2>
-          <p className="text-sm text-foreground/60">
+          <p className="text-sm text-muted-foreground">
             {formatCurrency(totalAmount)} total &middot; {filteredPayments.length} payment{filteredPayments.length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -308,7 +308,7 @@ export function PaymentListView() {
                               variant="outline"
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-foreground/60"
+                                !field.value && "text-muted-foreground"
                               )}
                             >
                               {field.value ? format(new Date(field.value), "dd MMM yyyy") : "Pick a date"}
@@ -418,7 +418,7 @@ export function PaymentListView() {
                 />
               </PopoverContent>
             </Popover>
-            <span className="text-foreground/60 text-xs">to</span>
+            <span className="text-muted-foreground text-xs">to</span>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="text-xs gap-1">
@@ -439,7 +439,7 @@ export function PaymentListView() {
         )}
 
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/60" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search payments..."
             value={searchQuery}
@@ -465,7 +465,7 @@ export function PaymentListView() {
             <IndianRupee className="w-8 h-8 text-emerald-400" />
           </div>
           <h3 className="font-semibold text-foreground mb-1">No payments yet</h3>
-          <p className="text-sm text-foreground/60 max-w-xs">
+          <p className="text-sm text-muted-foreground max-w-xs">
             Record your first payment to start tracking customer transactions.
           </p>
         </div>
@@ -474,8 +474,8 @@ export function PaymentListView() {
       {/* Search No Results */}
       {!isLoading && payments.length > 0 && filteredPayments.length === 0 && (
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Search className="w-10 h-10 text-foreground/60 mb-2" />
-          <p className="text-sm text-foreground/60">No payments match your search.</p>
+          <Search className="w-10 h-10 text-muted-foreground mb-2" />
+          <p className="text-sm text-muted-foreground">No payments match your search.</p>
         </div>
       )}
 
@@ -510,7 +510,7 @@ export function PaymentListView() {
                         <p className="text-lg font-bold text-emerald-600">
                           {formatCurrency(payment.amount)}
                         </p>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-foreground/60">
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                           <span>{formatDate(payment.date)}</span>
                           {payment.receiptNo && (
                             <span className="flex items-center gap-1">
@@ -520,7 +520,7 @@ export function PaymentListView() {
                           )}
                         </div>
                         {payment.notes && (
-                          <p className="text-xs text-foreground/60 mt-1 truncate">
+                          <p className="text-xs text-muted-foreground mt-1 truncate">
                             {payment.notes}
                           </p>
                         )}
@@ -528,7 +528,7 @@ export function PaymentListView() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-8 text-foreground/60 hover:text-destructive shrink-0"
+                        className="size-8 text-muted-foreground hover:text-destructive shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
                           setDeleteTarget(payment.id);

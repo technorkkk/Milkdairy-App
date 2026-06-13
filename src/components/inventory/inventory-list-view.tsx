@@ -213,7 +213,7 @@ export function InventoryListView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-foreground">Inventory</h2>
-          <p className="text-sm text-foreground/60">
+          <p className="text-sm text-muted-foreground">
             {inventoryItems.length} item{inventoryItems.length !== 1 ? "s" : ""} &middot;{" "}
             {formatCurrency(totalValue)} total value
             {lowStockCount > 0 && (
@@ -432,7 +432,7 @@ export function InventoryListView() {
         </div>
 
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/60" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search inventory..."
             value={searchQuery}
@@ -470,7 +470,7 @@ export function InventoryListView() {
             <Package className="w-8 h-8 text-emerald-400" />
           </div>
           <h3 className="font-semibold text-foreground mb-1">No inventory items</h3>
-          <p className="text-sm text-foreground/60 max-w-xs">
+          <p className="text-sm text-muted-foreground max-w-xs">
             Add your first inventory item to start tracking stock levels and values.
           </p>
         </div>
@@ -479,8 +479,8 @@ export function InventoryListView() {
       {/* Search No Results */}
       {!isLoading && inventoryItems.length > 0 && filteredItems.length === 0 && (
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Search className="w-10 h-10 text-foreground/60 mb-2" />
-          <p className="text-sm text-foreground/60">No items match your filters.</p>
+          <Search className="w-10 h-10 text-muted-foreground mb-2" />
+          <p className="text-sm text-muted-foreground">No items match your filters.</p>
         </div>
       )}
 
@@ -532,17 +532,17 @@ export function InventoryListView() {
                             <span className="text-2xl font-bold text-foreground">
                               {item.quantity}
                             </span>
-                            <span className="text-sm text-foreground/60">
+                            <span className="text-sm text-muted-foreground">
                               {unitLabels[item.unit] || item.unit}
                             </span>
                           </div>
                           {item.minStock > 0 && (
-                            <p className="text-xs text-foreground/60 mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-0.5">
                               Min: {item.minStock} {unitLabels[item.unit] || item.unit}
                             </p>
                           )}
                           {item.pricePerUnit > 0 && (
-                            <p className="text-xs text-foreground/60 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                               {formatCurrency(item.pricePerUnit)}/{unitLabels[item.unit] || item.unit} &middot;{" "}
                               Total: {formatCurrency(item.quantity * item.pricePerUnit)}
                             </p>
@@ -554,7 +554,7 @@ export function InventoryListView() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-foreground/60 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                                 disabled={deletingId === item.id}
                               >
                                 {deletingId === item.id ? (
@@ -582,7 +582,7 @@ export function InventoryListView() {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
-                          <ChevronRight className="w-4 h-4 text-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                       </div>
                     </CardContent>

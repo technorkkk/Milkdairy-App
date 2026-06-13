@@ -101,7 +101,7 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
             <button
               type="button"
               onClick={() => { clearError(); onSwitchToSignup(); }}
-              className="text-sm text-foreground/70 hover:text-foreground underline underline-offset-2 transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
             >
               Don&apos;t have an account? <span className="font-semibold text-emerald-700">Sign up</span>
             </button>

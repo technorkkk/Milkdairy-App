@@ -103,7 +103,7 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
           </Button>
 
           <div className="text-center">
-            <button type="button" onClick={() => { clearError(); onSwitchToLogin(); }} className="text-sm text-foreground/70 hover:text-foreground underline underline-offset-2 transition-colors">
+            <button type="button" onClick={() => { clearError(); onSwitchToLogin(); }} className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors">
               Already have an account? <span className="font-semibold text-emerald-700">Sign in</span>
             </button>
           </div>

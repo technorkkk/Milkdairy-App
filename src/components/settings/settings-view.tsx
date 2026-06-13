@@ -76,16 +76,16 @@ export function SettingsView() {
         </CardHeader>
         <CardContent className="p-4 space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-foreground/60">Name</span>
+            <span className="text-muted-foreground">Name</span>
             <span className="font-medium">{user?.name}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-foreground/60">Email</span>
+            <span className="text-muted-foreground">Email</span>
             <span className="font-medium">{user?.email}</span>
           </div>
           {user?.phone && (
             <div className="flex justify-between text-sm">
-              <span className="text-foreground/60">Phone</span>
+              <span className="text-muted-foreground">Phone</span>
               <span className="font-medium">{user.phone}</span>
             </div>
           )}
@@ -139,19 +139,19 @@ export function SettingsView() {
           ) : (
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-foreground/60">Name</span>
+                <span className="text-muted-foreground">Name</span>
                 <span className="font-medium">{dairy?.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-foreground/60">Owner</span>
+                <span className="text-muted-foreground">Owner</span>
                 <span className="font-medium">{dairy?.ownerName}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-foreground/60">Address</span>
+                <span className="text-muted-foreground">Address</span>
                 <span className="font-medium">{dairy?.address || "—"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-foreground/60">Phone</span>
+                <span className="text-muted-foreground">Phone</span>
                 <span className="font-medium">{dairy?.phone || "—"}</span>
               </div>
             </div>
@@ -196,8 +196,8 @@ export function SettingsView() {
 
       {/* App Info */}
       <div className="text-center py-4">
-        <p className="text-xs text-foreground/60">Dairy Ledger v1.0.0</p>
-        <p className="text-xs text-foreground/60">Offline-first milk delivery management</p>
+        <p className="text-xs text-muted-foreground">Dairy Ledger v1.0.0</p>
+        <p className="text-xs text-muted-foreground">Offline-first milk delivery management</p>
       </div>
     </div>
   );

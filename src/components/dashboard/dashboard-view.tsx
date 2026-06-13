@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { motion, type Variants } from "framer-motion";
+import { cn } from "@/lib/utils";
 import {
   TrendingUp,
   AlertCircle,
@@ -129,7 +130,7 @@ export function DashboardView() {
       label: "Mark Deliveries",
       icon: ClipboardCheck,
       view: "deliveries" as const,
-      color: "bg-emerald-100 text-emerald-700",
+      color: "bg-emerald-600 text-white",
     },
     {
       label: "Add Payment",
@@ -230,23 +231,26 @@ export function DashboardView() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.3 }}
       >
-        <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wider mb-2">Quick Actions</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Quick Actions</p>
         <div className="grid grid-cols-4 gap-2">
-          {quickActions.map((action) => {
+          {quickActions.map((action, idx) => {
             const Icon = action.icon;
             return (
               <Button
                 key={action.label}
                 variant="ghost"
-                className="flex flex-col items-center gap-1.5 h-auto py-3 px-1"
+                className={cn(
+                  "flex flex-col items-center gap-1.5 h-auto py-3 px-1",
+                  idx === 0 && "ring-2 ring-emerald-200"
+                )}
                 onClick={() => navigate(action.view)}
               >
                 <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${action.color}`}
+                  className={cn("w-11 h-11 rounded-xl flex items-center justify-center", action.color)}
                 >
                   <Icon className="w-5 h-5" />
                 </div>
-                <span className="text-[10px] font-medium leading-tight text-center">
+                <span className="text-[11px] font-semibold leading-tight text-center">
                   {action.label}
                 </span>
               </Button>
@@ -279,7 +283,8 @@ export function DashboardView() {
           </CardHeader>
           <CardContent className="px-4 pb-4 pt-0">
             {recentDeliveries.length === 0 ? (
-              <p className="text-sm text-foreground/50 py-4 text-center">
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                No deliveries yet. Start by marking deliveries.
               </p>
             ) : (
               <motion.ul
