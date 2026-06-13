@@ -16,6 +16,9 @@ import {
   SkipForward,
   Edit3,
   IndianRupee,
+  AlertCircle,
+  Search,
+  CalendarDays,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +31,16 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useCustomerStore, type Customer } from "@/stores/customer-store";
 import { useDeliveryStore, type Delivery } from "@/stores/delivery-store";
 import { useInventoryStore } from "@/stores/inventory-store";
@@ -38,8 +51,10 @@ import {
   formatDate,
   MILK_TYPES,
   SHIFT_LABELS,
+  getTodayStr,
 } from "@/lib/utils";
 import { addDays, parseISO, format } from "date-fns";
+import { toast } from "sonner";
 
 // ─── Delivery Action Sheet ──────────────────────────────────────────
 function DeliveryActionSheet({
@@ -323,6 +338,9 @@ export function DeliveryBoardView() {
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [markAllDialogOpen, setMarkAllDialogOpen] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // ─── Load data ─────────────────────────────────────────────────
 
@@ -354,12 +372,18 @@ export function DeliveryBoardView() {
   // ─── Filter customers by active + shift ────────────────────────
 
   const filteredCustomers = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
     return customers.filter((c) => {
       if (!c.isActive) return false;
       if (c.shift === "both") return true;
-      return c.shift === selectedShift;
+      if (c.shift !== selectedShift) return false;
+      // Apply search filter
+      if (query) {
+        return c.name.toLowerCase().includes(query) || (c.phone && c.phone.includes(query));
+      }
+      return true;
     });
-  }, [customers, selectedShift]);
+  }, [customers, selectedShift, searchQuery]);
 
   // ─── Get deliveries for selected date+shift ────────────────────
 
@@ -580,16 +604,42 @@ export function DeliveryBoardView() {
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-9 w-9 shrink-0"
-          onClick={goNextDay}
-          aria-label="Next day"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {selectedDate !== getTodayStr() && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 text-xs gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+              onClick={() => setSelectedDate(getTodayStr())}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              Today
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={goNextDay}
+            aria-label="Next day"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
+
+      {/* Search Bar */}
+      {customers.length > 5 && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="Search customer..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-9 rounded-lg bg-muted/50 border-0 focus-visible:ring-1 text-sm"
+          />
+        </div>
+      )}
 
       {/* Shift Toggle */}
       <div className="flex rounded-xl bg-muted p-1 gap-1">
@@ -669,37 +719,15 @@ export function DeliveryBoardView() {
       {pendingCount > 0 && (
         <Button
           className="w-full bg-emerald-600 hover:bg-emerald-700"
-          onClick={async () => {
-            const pendingCustomers = filteredCustomers.filter((c) => {
-              const d = deliveryMap.get(c.id);
-              return !d || (d.status !== "delivered" && d.status !== "skipped");
-            });
-            for (const customer of pendingCustomers) {
-              const rate = getCurrentRate(customer.milkType, selectedShift);
-              const pricePerL = rate?.pricePerL ?? 0;
-              const existing = deliveryMap.get(customer.id);
-              if (existing) {
-                await updateDelivery(existing.id, {
-                  status: "delivered",
-                  quantity: customer.defaultQuantity,
-                  pricePerL,
-                });
-              } else {
-                await addDelivery({
-                  customerId: customer.id,
-                  date: selectedDate,
-                  shift: selectedShift,
-                  quantity: customer.defaultQuantity,
-                  milkType: customer.milkType,
-                  pricePerL,
-                  status: "delivered",
-                });
-              }
-            }
-          }}
+          disabled={markingAll}
+          onClick={() => setMarkAllDialogOpen(true)}
         >
-          <CheckCircle2 className="size-4 mr-2" />
-          Mark All {pendingCount} Pending as Delivered
+          {markingAll ? (
+            <Loader2 className="size-4 mr-2 animate-spin" />
+          ) : (
+            <CheckCircle2 className="size-4 mr-2" />
+          )}
+          {markingAll ? "Marking all..." : `Mark All ${pendingCount} Pending as Delivered`}
         </Button>
       )}
 
@@ -849,6 +877,64 @@ export function DeliveryBoardView() {
         onUndo={handleUndo}
         onUpdateQuantity={handleUpdateQuantity}
       />
+
+      {/* Mark All Delivered Confirmation */}
+      <AlertDialog open={markAllDialogOpen} onOpenChange={setMarkAllDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark All as Delivered?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark all {pendingCount} pending customers as delivered with their default quantities for the {SHIFT_LABELS[selectedShift]} shift. You can still edit individual deliveries afterwards.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={markingAll}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-emerald-600 hover:bg-emerald-700"
+              disabled={markingAll}
+              onClick={async () => {
+                setMarkingAll(true);
+                try {
+                  const pendingCustomers = filteredCustomers.filter((c) => {
+                    const d = deliveryMap.get(c.id);
+                    return !d || (d.status !== "delivered" && d.status !== "skipped");
+                  });
+                  for (const customer of pendingCustomers) {
+                    const rate = getCurrentRate(customer.milkType, selectedShift);
+                    const pricePerL = rate?.pricePerL ?? 0;
+                    const existing = deliveryMap.get(customer.id);
+                    if (existing) {
+                      await updateDelivery(existing.id, {
+                        status: "delivered",
+                        quantity: customer.defaultQuantity,
+                        pricePerL,
+                      });
+                    } else {
+                      await addDelivery({
+                        customerId: customer.id,
+                        date: selectedDate,
+                        shift: selectedShift,
+                        quantity: customer.defaultQuantity,
+                        milkType: customer.milkType,
+                        pricePerL,
+                        status: "delivered",
+                      });
+                    }
+                  }
+                } catch (err) {
+                  console.error("Mark all delivered error:", err);
+                } finally {
+                  setMarkingAll(false);
+                  setMarkAllDialogOpen(false);
+                }
+              }}
+            >
+              {markingAll ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
+              {markingAll ? "Marking..." : "Yes, Mark All Delivered"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

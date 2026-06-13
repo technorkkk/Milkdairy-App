@@ -44,7 +44,9 @@ export const usePaymentStore = create<PaymentState>()(
           const res = await fetch(url);
           const data = await res.json();
           if (res.ok) {
-            set({ payments: data.payments || [], isLoading: false, error: null });
+            // API returns array directly or wrapped in { payments: [...] }
+            const paymentsList = Array.isArray(data) ? data : (data.payments || []);
+            set({ payments: paymentsList, isLoading: false, error: null });
           } else {
             set({ isLoading: false, error: data.error || "Failed to load payments" });
           }
@@ -62,7 +64,8 @@ export const usePaymentStore = create<PaymentState>()(
           });
           const result = await res.json();
           if (!res.ok) throw new Error(result.error || "Failed to add payment");
-          const newPayment = result.payment as Payment;
+          // API returns payment directly (spread), not wrapped in { payment: ... }
+          const newPayment = (result.payment || result) as Payment;
           set((state) => ({
             payments: [...state.payments, newPayment],
           }));
@@ -82,9 +85,10 @@ export const usePaymentStore = create<PaymentState>()(
           });
           const result = await res.json();
           if (!res.ok) throw new Error(result.error || "Failed to update");
+          const updatedPayment = result.payment || result;
           set((state) => ({
             payments: state.payments.map((p) =>
-              p.id === id ? { ...p, ...result.payment } : p
+              p.id === id ? { ...p, ...updatedPayment } : p
             ),
           }));
         } catch (error) {

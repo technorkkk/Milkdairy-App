@@ -7,11 +7,12 @@ import { roundTo2, reconcileAccount } from "@/lib/accounting";
  * based on all their deliveries and payments.
  */
 async function recalculateCustomerBalances(customerId: string) {
-  const { data: customer } = await supabase
+  const { data: customer, error: customerError } = await supabase
     .from("Customer")
     .select("id, billingType, openingBalance")
     .eq("id", customerId)
-    .single();
+    .maybeSingle();
+  if (customerError) { console.error("recalculateCustomerBalances: error fetching customer", customerError); }
 
   if (!customer) return;
 
@@ -106,11 +107,12 @@ export async function POST(request: Request) {
     }
 
     // Verify the dairy exists
-    const { data: dairy } = await supabase
+    const { data: dairy, error: dairyLookupError } = await supabase
       .from("Dairy")
       .select("id")
       .eq("id", dairyId)
       .maybeSingle();
+    if (dairyLookupError) { console.error("POST /api/customers: error verifying dairy", dairyLookupError); }
 
     if (!dairy) {
       return NextResponse.json(
@@ -130,7 +132,8 @@ export async function POST(request: Request) {
       duplicateQuery.eq("phone", phone);
     }
 
-    const { data: existingCustomer } = await duplicateQuery.maybeSingle();
+    const { data: existingCustomer, error: duplicateError } = await duplicateQuery.maybeSingle();
+    if (duplicateError) { console.error("POST /api/customers: error checking duplicate", duplicateError); }
 
     if (existingCustomer) {
       return NextResponse.json(
@@ -185,11 +188,12 @@ export async function POST(request: Request) {
     await recalculateCustomerBalances(customer.id);
 
     // Fetch the updated customer to return
-    const { data: updatedCustomer } = await supabase
+    const { data: updatedCustomer, error: fetchError } = await supabase
       .from("Customer")
       .select("*")
       .eq("id", customer.id)
-      .single();
+      .maybeSingle();
+    if (fetchError) { console.error("POST /api/customers: error fetching updated customer", fetchError); }
 
     return NextResponse.json({ customer: updatedCustomer }, { status: 201 });
   } catch (error) {
@@ -214,11 +218,12 @@ export async function PUT(request: Request) {
       );
     }
 
-    const { data: existingCustomer } = await supabase
+    const { data: existingCustomer, error: lookupError } = await supabase
       .from("Customer")
       .select("*")
       .eq("id", id)
-      .single();
+      .maybeSingle();
+    if (lookupError) { console.error("PUT /api/customers: error fetching customer", lookupError); }
 
     if (!existingCustomer) {
       return NextResponse.json(
@@ -274,11 +279,12 @@ export async function PUT(request: Request) {
     // Recalculate balances after update
     await recalculateCustomerBalances(id);
 
-    const { data: updatedCustomer } = await supabase
+    const { data: updatedCustomer, error: fetchError } = await supabase
       .from("Customer")
       .select("*")
       .eq("id", id)
-      .single();
+      .maybeSingle();
+    if (fetchError) { console.error("PUT /api/customers: error fetching updated customer", fetchError); }
 
     return NextResponse.json({ customer: updatedCustomer });
   } catch (error) {
@@ -303,11 +309,12 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const { data: existingCustomer } = await supabase
+    const { data: existingCustomer, error: lookupError } = await supabase
       .from("Customer")
       .select("id")
       .eq("id", id)
       .maybeSingle();
+    if (lookupError) { console.error("DELETE /api/customers: error fetching customer", lookupError); }
 
     if (!existingCustomer) {
       return NextResponse.json(

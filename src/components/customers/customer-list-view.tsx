@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, parseISO, addDays } from "date-fns";
+import { toast } from "sonner";
 import {
   Search,
   Plus,
@@ -546,6 +547,7 @@ function AddCustomerForm({
         }
       }
 
+      toast.success(`${data.name} added successfully`);
       resetAndClose();
     } catch (err) {
       // error is set in store, will show in the form
@@ -1054,6 +1056,7 @@ export function CustomerListView() {
                   onSelect={() => handleSelectCustomer(customer.id)}
                   onDelete={async (c) => {
                     await deleteCustomer(c.id);
+                    toast.success(`${c.name} deleted`);
                   }}
                 />
               ))}

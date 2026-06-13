@@ -25,7 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 
 export function AppShell() {
-  const { currentView, navigate } = useUIStore();
+  const { currentView, navigate, isOnline } = useUIStore();
   const { isAuthenticated, user } = useAuthStore();
   const { isSetup, loadDairy } = useDairyStore();
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
@@ -132,8 +132,9 @@ export function AppShell() {
               <h1 className="text-lg font-semibold text-foreground">Dairy Ledger</h1>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">
-                {useUIStore.getState().isOnline ? "🟢 Online" : "🔴 Offline"}
+              <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <span className={`size-2 rounded-full ${isOnline ? "bg-emerald-500" : "bg-red-500 animate-pulse"}`} />
+                {isOnline ? "Online" : "Offline"}
               </span>
             </div>
           </div>

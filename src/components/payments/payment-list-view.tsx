@@ -16,6 +16,7 @@ import {
   Banknote,
   Smartphone,
   Building2,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,6 +26,16 @@ import { PAYMENT_MODES, formatDate, getTodayStr, cn } from "@/lib/utils";
 import { usePaymentStore } from "@/stores/payment-store";
 import { useCustomerStore } from "@/stores/customer-store";
 import { useDairyStore } from "@/stores/dairy-store";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,7 +81,7 @@ const paymentModeIcons: Record<string, React.ReactNode> = {
 
 export function PaymentListView() {
   const { dairy } = useDairyStore();
-  const { payments, isLoading, loadPayments, addPayment } = usePaymentStore();
+  const { payments, isLoading, loadPayments, addPayment, deletePayment } = usePaymentStore();
   const { customers, loadCustomers } = useCustomerStore();
 
   const [dateRange, setDateRange] = useState<DateRange>("month");
@@ -79,6 +90,8 @@ export function PaymentListView() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const dairyId = dairy?.id || "";
 
@@ -478,7 +491,7 @@ export function PaymentListView() {
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.2, delay: index * 0.03 }}
               >
-                <Card className="hover:shadow-md transition-shadow cursor-pointer group">
+                <Card className="hover:shadow-md transition-shadow group">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
@@ -512,7 +525,17 @@ export function PaymentListView() {
                           </p>
                         )}
                       </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteTarget(payment.id);
+                        }}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -521,6 +544,40 @@ export function PaymentListView() {
           </AnimatePresence>
         </div>
       )}
+
+      {/* Delete Payment Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Payment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this payment? This will update the customer's balance. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!deleteTarget) return;
+                setIsDeleting(true);
+                try {
+                  await deletePayment(deleteTarget);
+                  toast.success("Payment deleted");
+                  setDeleteTarget(null);
+                } catch {
+                  toast.error("Failed to delete payment");
+                } finally {
+                  setIsDeleting(false);
+                }
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

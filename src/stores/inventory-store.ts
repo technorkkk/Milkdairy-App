@@ -137,7 +137,9 @@ export const useInventoryStore = create<InventoryState>()(
           const res = await fetch(`/api/inventory?dairyId=${dairyId}`);
           const data = await res.json();
           if (res.ok) {
-            set({ inventoryItems: data.items || [], isLoading: false, error: null });
+            // API returns array directly or wrapped in { items: [...] }
+            const itemsList = Array.isArray(data) ? data : (data.items || []);
+            set({ inventoryItems: itemsList, isLoading: false, error: null });
           } else {
             set({ isLoading: false, error: data.error || "Failed to load inventory" });
           }
@@ -155,8 +157,10 @@ export const useInventoryStore = create<InventoryState>()(
           });
           const result = await res.json();
           if (!res.ok) throw new Error(result.error || "Failed to add item");
+          // API returns item directly (spread), not wrapped in { item: ... }
+          const newItem = result.item || result;
           set((state) => ({
-            inventoryItems: [...state.inventoryItems, result.item],
+            inventoryItems: [...state.inventoryItems, newItem],
           }));
         } catch (error) {
           set({ error: error instanceof Error ? error.message : "Failed to add inventory item" });
@@ -173,9 +177,10 @@ export const useInventoryStore = create<InventoryState>()(
           });
           const result = await res.json();
           if (!res.ok) throw new Error(result.error || "Failed to update");
+          const updatedItem = result.item || result;
           set((state) => ({
             inventoryItems: state.inventoryItems.map((i) =>
-              i.id === id ? { ...i, ...result.item } : i
+              i.id === id ? { ...i, ...updatedItem } : i
             ),
           }));
         } catch (error) {

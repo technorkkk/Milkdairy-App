@@ -42,7 +42,9 @@ export const useExpenseStore = create<ExpenseState>()(
           const res = await fetch(url);
           const data = await res.json();
           if (res.ok) {
-            set({ expenses: data.expenses || [], isLoading: false, error: null });
+            // API returns array directly or wrapped in { expenses: [...] }
+            const expensesList = Array.isArray(data) ? data : (data.expenses || []);
+            set({ expenses: expensesList, isLoading: false, error: null });
           } else {
             set({ isLoading: false, error: data.error || "Failed to load expenses" });
           }
@@ -60,8 +62,10 @@ export const useExpenseStore = create<ExpenseState>()(
           });
           const result = await res.json();
           if (!res.ok) throw new Error(result.error || "Failed to add expense");
+          // API returns expense directly (spread), not wrapped in { expense: ... }
+          const newExpense = result.expense || result;
           set((state) => ({
-            expenses: [...state.expenses, result.expense],
+            expenses: [...state.expenses, newExpense],
           }));
         } catch (error) {
           set({ error: error instanceof Error ? error.message : "Failed to add expense" });
@@ -78,9 +82,10 @@ export const useExpenseStore = create<ExpenseState>()(
           });
           const result = await res.json();
           if (!res.ok) throw new Error(result.error || "Failed to update");
+          const updatedExpense = result.expense || result;
           set((state) => ({
             expenses: state.expenses.map((e) =>
-              e.id === id ? { ...e, ...result.expense } : e
+              e.id === id ? { ...e, ...updatedExpense } : e
             ),
           }));
         } catch (error) {
