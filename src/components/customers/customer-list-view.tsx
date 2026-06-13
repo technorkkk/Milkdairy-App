@@ -179,7 +179,7 @@ function CustomerCard({
               </h3>
               <div className="flex items-center gap-1 shrink-0">
                 <ShiftIcon shift={customer.shift} />
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-foreground/60">
                   {SHIFT_LABELS[customer.shift]}
                 </span>
               </div>
@@ -187,8 +187,8 @@ function CustomerCard({
 
             {customer.phone && (
               <div className="flex items-center gap-1 mt-0.5">
-                <Phone className="size-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground truncate">
+                <Phone className="size-3 text-foreground/60" />
+                <span className="text-xs text-foreground/60 truncate">
                   {customer.phone}
                 </span>
               </div>
@@ -208,7 +208,7 @@ function CustomerCard({
               >
                 {MILK_TYPES[customer.milkType]}
               </Badge>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 text-muted-foreground">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 text-foreground/60">
                 {customer.defaultQuantity}L/day
               </Badge>
             </div>
@@ -219,7 +219,7 @@ function CustomerCard({
             <Button
               variant="ghost"
               size="icon"
-              className="size-7 text-muted-foreground hover:text-destructive -mr-1 -mt-1"
+              className="size-7 text-foreground/60 hover:text-destructive -mr-1 -mt-1"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowDeleteConfirm(true);
@@ -227,7 +227,7 @@ function CustomerCard({
             >
               <Trash2 className="size-3.5" />
             </Button>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+            <span className="text-[10px] text-foreground/60 uppercase tracking-wide">
               {customer.billingType === "prepaid" ? "Wallet" : "Due"}
             </span>
             <div className="flex items-center gap-0.5 mt-0.5">
@@ -338,7 +338,7 @@ function AbsentDateCalendar({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-xs font-medium text-foreground/60">
           Select absent dates (tap to mark)
         </span>
         <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
@@ -404,7 +404,7 @@ function AbsentDateCalendar({
               onClick={() => isInRange && !isFuture && onToggleAbsent(dateStr)}
               className={`flex flex-col items-center justify-center rounded-md p-0.5 min-h-[2.25rem] text-[11px] font-medium transition-all ${
                 !isInRange || isFuture
-                  ? "text-muted-foreground/30 cursor-not-allowed"
+                  ? "text-foreground/60/30 cursor-not-allowed"
                   : isAbsent
                     ? "bg-red-100 text-red-700 border border-red-300 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800 ring-1 ring-red-300"
                     : isToday
@@ -426,11 +426,11 @@ function AbsentDateCalendar({
       <div className="flex items-center gap-3 justify-center pt-1">
         <div className="flex items-center gap-1">
           <div className="size-2.5 rounded-sm bg-emerald-200 border border-emerald-300" />
-          <span className="text-[10px] text-muted-foreground">Delivered</span>
+          <span className="text-[10px] text-foreground/60">Delivered</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="size-2.5 rounded-sm bg-red-100 border border-red-300" />
-          <span className="text-[10px] text-muted-foreground">Absent</span>
+          <span className="text-[10px] text-foreground/60">Absent</span>
         </div>
       </div>
     </div>
@@ -819,7 +819,7 @@ function AddCustomerForm({
                       onChange={(e) => setNewStartDate(e.target.value)}
                       className="w-full"
                     />
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-[11px] text-foreground/60">
                       Is date se billing cycle calculate hoga. Example: 25 May se start = 25 May - 24 June.
                     </p>
                   </div>
@@ -854,7 +854,7 @@ function AddCustomerForm({
                         }}
                         className="w-full"
                       />
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-[11px] text-foreground/60">
                         From which date was this customer receiving milk?
                       </p>
                     </div>
@@ -880,7 +880,7 @@ function AddCustomerForm({
                     {pastStartDate && (
                       <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Total days</span>
+                          <span className="text-xs text-foreground/60">Total days</span>
                           <span className="text-xs font-medium">
                             {Math.ceil(
                               (new Date(today).getTime() - new Date(pastStartDate).getTime()) /
@@ -889,7 +889,7 @@ function AddCustomerForm({
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Absent days</span>
+                          <span className="text-xs text-foreground/60">Absent days</span>
                           <span className="text-xs font-medium text-red-600">
                             {absentDates.size}
                           </span>
@@ -915,7 +915,7 @@ function AddCustomerForm({
         {/* Fixed Footer */}
         <div className="shrink-0 border-t bg-background px-4 py-3 flex flex-col gap-2">
           {storeError && (
-            <div className="rounded-md bg-destructive/10 text-destructive text-xs p-2 text-center">
+            <div className="error-alert text-xs p-2">
               {storeError}
             </div>
           )}
@@ -932,7 +932,7 @@ function AddCustomerForm({
           <Button
             type="submit"
             form="add-customer-form"
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+            className="flex-1 btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
             disabled={submitting}
           >
             {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
@@ -990,7 +990,7 @@ export function CustomerListView() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-xl font-bold text-foreground">Customers</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-foreground/60 mt-0.5">
               {totalCustomers} active{totalCustomers !== 1 ? "s" : ""}
             </p>
           </div>
@@ -1002,7 +1002,7 @@ export function CustomerListView() {
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-foreground/60" />
           <Input
             placeholder="Search by name or phone..."
             value={searchQuery}
@@ -1017,20 +1017,20 @@ export function CustomerListView() {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Loader2 className="size-8 text-emerald-600 animate-spin" />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-foreground/60">
               Loading customers...
             </p>
           </div>
         ) : filteredCustomers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <div className="size-16 rounded-full bg-muted flex items-center justify-center">
-              <Users className="size-8 text-muted-foreground" />
+              <Users className="size-8 text-foreground/60" />
             </div>
             <div className="text-center">
               <p className="font-medium text-foreground">
                 {searchQuery ? "No customers found" : "No customers yet"}
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-foreground/60 mt-1">
                 {searchQuery
                   ? "Try a different search term"
                   : "Add your first customer to get started"}
@@ -1071,7 +1071,7 @@ export function CustomerListView() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setAddSheetOpen(true)}
-          className="fixed bottom-24 right-5 z-30 size-14 rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 flex items-center justify-center hover:bg-emerald-700 transition-colors"
+          className="fixed bottom-24 right-5 z-30 size-14 rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-600/40 font-semibold flex items-center justify-center hover:bg-emerald-700 transition-colors"
           aria-label="Add Customer"
         >
           <Plus className="size-6" />

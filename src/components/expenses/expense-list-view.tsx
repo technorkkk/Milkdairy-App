@@ -200,13 +200,13 @@ export function ExpenseListView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-foreground">Expenses</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-foreground/60">
             {formatCurrency(totalAmount)} total &middot; {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+            <Button className="btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 gap-2">
               <Plus className="w-4 h-4" />
               Add Expense
             </Button>
@@ -280,7 +280,7 @@ export function ExpenseListView() {
                               variant="outline"
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                !field.value && "text-foreground/60"
                               )}
                             >
                               {field.value ? format(new Date(field.value), "dd MMM yyyy") : "Pick a date"}
@@ -326,7 +326,7 @@ export function ExpenseListView() {
                   </Button>
                   <Button
                     type="submit"
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
                     disabled={submitting}
                   >
                     {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -376,7 +376,7 @@ export function ExpenseListView() {
                 />
               </PopoverContent>
             </Popover>
-            <span className="text-muted-foreground text-xs">to</span>
+            <span className="text-foreground/60 text-xs">to</span>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="text-xs gap-1">
@@ -397,7 +397,7 @@ export function ExpenseListView() {
         )}
 
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/60" />
           <Input
             placeholder="Search expenses..."
             value={searchQuery}
@@ -442,7 +442,7 @@ export function ExpenseListView() {
             <Receipt className="w-8 h-8 text-emerald-400" />
           </div>
           <h3 className="font-semibold text-foreground mb-1">No expenses yet</h3>
-          <p className="text-sm text-muted-foreground max-w-xs">
+          <p className="text-sm text-foreground/60 max-w-xs">
             Record your first expense to start tracking your dairy&apos;s spending.
           </p>
         </div>
@@ -451,8 +451,8 @@ export function ExpenseListView() {
       {/* Search No Results */}
       {!isLoading && expenses.length > 0 && filteredExpenses.length === 0 && (
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Search className="w-10 h-10 text-muted-foreground mb-2" />
-          <p className="text-sm text-muted-foreground">No expenses match your search.</p>
+          <Search className="w-10 h-10 text-foreground/60 mb-2" />
+          <p className="text-sm text-foreground/60">No expenses match your search.</p>
         </div>
       )}
 
@@ -484,11 +484,11 @@ export function ExpenseListView() {
                         <p className="text-lg font-bold text-destructive">
                           {formatCurrency(expense.amount)}
                         </p>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-3 mt-1 text-xs text-foreground/60">
                           <span>{formatDate(expense.date)}</span>
                         </div>
                         {expense.description && (
-                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                          <p className="text-xs text-foreground/60 mt-1 truncate">
                             {expense.description}
                           </p>
                         )}
@@ -496,7 +496,7 @@ export function ExpenseListView() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-8 text-muted-foreground hover:text-destructive shrink-0"
+                        className="size-8 text-foreground/60 hover:text-destructive shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
                           setDeleteTarget(expense.id);

@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 
 interface SignupFormProps {
   onSwitchToLogin: () => void;
@@ -82,26 +82,29 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
           </div>
 
           {error && (
-            <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-              {error.includes("Internal server error") ? (
-                <div className="space-y-1">
-                  <p>Something went wrong on the server.</p>
-                  <p className="text-xs">Please try again later or contact support.</p>
-                </div>
-              ) : (
-                error
-              )}
+            <div className="error-alert" role="alert" aria-live="assertive">
+              <AlertCircle className="w-4 h-4 error-alert-icon" />
+              <div>
+                <p className="error-alert-title">Account Creation Failed</p>
+                <p className="error-alert-desc">
+                  {error.includes("Internal server error")
+                    ? "Something went wrong on the server. Please try again in a moment."
+                    : error.includes("already exists") || error.includes("409")
+                    ? "An account with this email already exists. Try signing in instead."
+                    : error}
+                </p>
+              </div>
             </div>
           )}
 
-          <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={loading}>
+          <Button type="submit" className="w-full btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20" disabled={loading}>
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Create Account
+            Create Your Account
           </Button>
 
           <div className="text-center">
-            <button type="button" onClick={() => { clearError(); onSwitchToLogin(); }} className="text-sm text-muted-foreground hover:text-foreground underline">
-              Already have an account? Sign in
+            <button type="button" onClick={() => { clearError(); onSwitchToLogin(); }} className="text-sm text-foreground/70 hover:text-foreground underline underline-offset-2 transition-colors">
+              Already have an account? <span className="font-semibold text-emerald-700">Sign in</span>
             </button>
           </div>
         </form>

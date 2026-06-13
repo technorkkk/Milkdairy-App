@@ -65,7 +65,7 @@ export function AuditLedgerView() {
       case "delete": return <Trash2 className="w-4 h-4 text-destructive" />;
       case "login": return <Circle className="w-4 h-4 text-blue-600" />;
       case "sync": return <ArrowDownCircle className="w-4 h-4 text-purple-600" />;
-      default: return <Circle className="w-4 h-4 text-muted-foreground" />;
+      default: return <Circle className="w-4 h-4 text-foreground/60" />;
     }
   };
 
@@ -123,9 +123,9 @@ export function AuditLedgerView() {
       ) : auditLogs.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
-            <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">No audit logs yet</p>
-            <p className="text-xs text-muted-foreground mt-1">Actions will be recorded here as you use the app</p>
+            <BookOpen className="w-12 h-12 mx-auto text-foreground/60 mb-3" />
+            <p className="text-foreground/60">No audit logs yet</p>
+            <p className="text-xs text-foreground/60 mt-1">Actions will be recorded here as you use the app</p>
           </CardContent>
         </Card>
       ) : (
@@ -152,9 +152,9 @@ export function AuditLedgerView() {
                           </Badge>
                         </div>
                         {log.details && (
-                          <p className="text-xs text-muted-foreground truncate">{log.details}</p>
+                          <p className="text-xs text-foreground/60 truncate">{log.details}</p>
                         )}
-                        <p className="text-[10px] text-muted-foreground mt-1">
+                        <p className="text-[10px] text-foreground/60 mt-1">
                           {formatDate(log.timestamp)} &middot; {new Date(log.timestamp).toLocaleTimeString()}
                         </p>
                       </div>

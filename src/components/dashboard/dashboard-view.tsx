@@ -187,7 +187,7 @@ export function DashboardView() {
   // ─── Render ────────────────────────────────────────────────────
 
   return (
-    <div className="px-4 py-4 space-y-5 max-w-lg mx-auto">
+    <div className="px-4 py-4 space-y-6 max-w-lg mx-auto">
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3">
         {summaryCards.map((card, i) => {
@@ -230,6 +230,7 @@ export function DashboardView() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.3 }}
       >
+        <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wider mb-2">Quick Actions</p>
         <div className="grid grid-cols-4 gap-2">
           {quickActions.map((action) => {
             const Icon = action.icon;
@@ -260,26 +261,25 @@ export function DashboardView() {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4, duration: 0.3 }}
       >
-        <Card className="py-0 gap-0">
+        <Card className="py-0 gap-0 border-border/80">
           <CardHeader className="px-4 pt-4 pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold">
+              <CardTitle className="text-sm font-semibold text-foreground">
                 Recent Deliveries
               </CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs text-emerald-600 h-7 px-2"
+                className="text-xs text-emerald-700 font-semibold h-7 px-3 hover:bg-emerald-50"
                 onClick={() => navigate("deliveries")}
               >
-                View All
+                View All →
               </Button>
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-4 pt-0">
             {recentDeliveries.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                No deliveries yet this month
+              <p className="text-sm text-foreground/50 py-4 text-center">
               </p>
             ) : (
               <motion.ul
@@ -332,13 +332,13 @@ export function DashboardView() {
         <Card className="py-0 gap-0">
           <CardHeader className="px-4 pt-4 pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold">
+              <CardTitle className="text-sm font-semibold text-foreground">
                 Top Outstanding
               </CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs text-emerald-600 h-7 px-2"
+                className="text-xs text-emerald-700 font-semibold h-7 px-3 hover:bg-emerald-50"
                 onClick={() => navigate("customers")}
               >
                 View All

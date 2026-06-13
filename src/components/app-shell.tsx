@@ -132,7 +132,7 @@ export function AppShell() {
               <h1 className="text-lg font-semibold text-foreground">Dairy Ledger</h1>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <span className="text-xs text-foreground/60 flex items-center gap-1.5">
                 <span className={`size-2 rounded-full ${isOnline ? "bg-emerald-500" : "bg-red-500 animate-pulse"}`} />
                 {isOnline ? "Online" : "Offline"}
               </span>

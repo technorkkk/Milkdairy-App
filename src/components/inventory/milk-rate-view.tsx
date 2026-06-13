@@ -168,13 +168,13 @@ export function MilkRateView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-foreground">Milk Rates</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-foreground/60">
             {milkRates.length} rate{milkRates.length !== 1 ? "s" : ""} configured
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+            <Button className="btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 gap-2">
               <Plus className="w-4 h-4" />
               Add Rate
             </Button>
@@ -273,7 +273,7 @@ export function MilkRateView() {
                               variant="outline"
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                !field.value && "text-foreground/60"
                               )}
                             >
                               {field.value ? format(new Date(field.value), "dd MMM yyyy") : "Pick a date"}
@@ -334,7 +334,7 @@ export function MilkRateView() {
             <MilkOff className="w-8 h-8 text-emerald-400" />
           </div>
           <h3 className="font-semibold text-foreground mb-1">No milk rates configured</h3>
-          <p className="text-sm text-muted-foreground max-w-xs">
+          <p className="text-sm text-foreground/60 max-w-xs">
             Add your first milk rate to set the price per litre for different milk types.
           </p>
         </div>
@@ -352,7 +352,7 @@ export function MilkRateView() {
                 >
                   {MILK_TYPES[milkType] || milkType}
                 </Badge>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-foreground/60">
                   {rates.length} rate{rates.length !== 1 ? "s" : ""}
                 </span>
               </div>
@@ -372,7 +372,7 @@ export function MilkRateView() {
                             <div className="flex-1">
                               <p className="text-2xl font-bold text-emerald-600">
                                 {formatCurrency(rate.pricePerL)}
-                                <span className="text-sm font-normal text-muted-foreground">/L</span>
+                                <span className="text-sm font-normal text-foreground/60">/L</span>
                               </p>
                               <div className="flex items-center gap-2 mt-2">
                                 <Badge
@@ -383,7 +383,7 @@ export function MilkRateView() {
                                   {SHIFT_LABELS[rate.shift] || rate.shift}
                                 </Badge>
                               </div>
-                              <p className="text-xs text-muted-foreground mt-2">
+                              <p className="text-xs text-foreground/60 mt-2">
                                 Effective from {formatDate(rate.effectiveFrom)}
                               </p>
                             </div>
@@ -392,7 +392,7 @@ export function MilkRateView() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  className="h-8 w-8 text-foreground/60 hover:text-destructive"
                                   disabled={deletingId === rate.id}
                                 >
                                   {deletingId === rate.id ? (

@@ -152,7 +152,7 @@ export function ReportsView() {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingUp className="w-4 h-4 text-emerald-600" />
-                    <span className="text-xs text-muted-foreground">Revenue</span>
+                    <span className="text-xs text-foreground/60">Revenue</span>
                   </div>
                   <p className="text-lg font-bold text-emerald-600">{formatCurrency(stats.totalRevenue)}</p>
                 </CardContent>
@@ -163,7 +163,7 @@ export function ReportsView() {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-1">
                     <DollarSign className="w-4 h-4 text-amber-600" />
-                    <span className="text-xs text-muted-foreground">Expenses</span>
+                    <span className="text-xs text-foreground/60">Expenses</span>
                   </div>
                   <p className="text-lg font-bold text-amber-600">{formatCurrency(stats.totalExpenses)}</p>
                 </CardContent>
@@ -178,7 +178,7 @@ export function ReportsView() {
                     ) : (
                       <ArrowDownRight className="w-4 h-4 text-destructive" />
                     )}
-                    <span className="text-xs text-muted-foreground">Net Profit</span>
+                    <span className="text-xs text-foreground/60">Net Profit</span>
                   </div>
                   <p className={`text-lg font-bold ${stats.netProfit >= 0 ? "text-emerald-600" : "text-destructive"}`}>
                     {formatCurrency(stats.netProfit)}
@@ -191,7 +191,7 @@ export function ReportsView() {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-1">
                     <DollarSign className="w-4 h-4 text-red-600" />
-                    <span className="text-xs text-muted-foreground">Outstanding</span>
+                    <span className="text-xs text-foreground/60">Outstanding</span>
                   </div>
                   <p className="text-lg font-bold text-red-600">{formatCurrency(stats.totalOutstanding)}</p>
                 </CardContent>
@@ -206,7 +206,7 @@ export function ReportsView() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-emerald-600">{formatCurrency(stats.totalPayments)}</p>
-              <p className="text-xs text-muted-foreground mt-1">Total payments received this period</p>
+              <p className="text-xs text-foreground/60 mt-1">Total payments received this period</p>
             </CardContent>
           </Card>
 
@@ -223,7 +223,7 @@ export function ReportsView() {
                 </div>
               ))}
               {Object.keys(stats.expenseByCategory).length === 0 && (
-                <p className="text-sm text-muted-foreground">No expenses recorded</p>
+                <p className="text-sm text-foreground/60">No expenses recorded</p>
               )}
             </CardContent>
           </Card>
@@ -235,7 +235,7 @@ export function ReportsView() {
               <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{stats.totalQty} <span className="text-base font-normal text-muted-foreground">litres</span></p>
+              <p className="text-3xl font-bold">{stats.totalQty} <span className="text-base font-normal text-foreground/60">litres</span></p>
             </CardContent>
           </Card>
 
@@ -282,13 +282,13 @@ export function ReportsView() {
             <Card>
               <CardContent className="p-3 text-center">
                 <p className="text-2xl font-bold">{stats.activeCustomers}</p>
-                <p className="text-xs text-muted-foreground">Active Customers</p>
+                <p className="text-xs text-foreground/60">Active Customers</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-3 text-center">
                 <p className="text-2xl font-bold">{stats.prepaidCustomers + stats.postpaidCustomers}</p>
-                <p className="text-xs text-muted-foreground">Total Customers</p>
+                <p className="text-xs text-foreground/60">Total Customers</p>
               </CardContent>
             </Card>
           </div>
@@ -310,7 +310,7 @@ export function ReportsView() {
                 </div>
               ))}
               {stats.topCustomers.length === 0 && (
-                <p className="text-sm text-muted-foreground">No delivery data</p>
+                <p className="text-sm text-foreground/60">No delivery data</p>
               )}
             </CardContent>
           </Card>

@@ -82,7 +82,7 @@ export function BottomNavBar() {
                   "flex flex-col items-center justify-center gap-0.5 py-1 px-3 min-w-[56px] transition-colors",
                   active
                     ? "text-emerald-600"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-foreground/50 hover:text-foreground font-medium"
                 )}
               >
                 <Icon className={cn("w-5 h-5", active && "stroke-[2.5]")} />

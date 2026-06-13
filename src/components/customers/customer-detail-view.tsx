@@ -350,7 +350,7 @@ function CalendarCell({
   const skipped = deliveries.filter((d) => d.status === "skipped" || d.status === "cancelled");
 
   let bgColor = "bg-muted/40";
-  let textColor = "text-muted-foreground";
+  let textColor = "text-foreground/60";
   let quantity: string | null = null;
   let borderClass = "";
 
@@ -558,7 +558,7 @@ function AddPaymentDialog({
           <Button
             type="submit"
             form="add-payment-form"
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
             disabled={submitting}
           >
             {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
@@ -815,7 +815,7 @@ function EditCustomerDialog({
                 </div>
                 {showQtyChangeDate && (
                   <div className="space-y-1.5 pl-6">
-                    <Label className="text-[11px] text-muted-foreground">
+                    <Label className="text-[11px] text-foreground/60">
                       Effective from date
                     </Label>
                     <Input
@@ -824,7 +824,7 @@ function EditCustomerDialog({
                       onChange={(e) => setQuantityEffectiveFrom(e.target.value)}
                       className="h-9 text-sm"
                     />
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[10px] text-foreground/60">
                       This records when the new quantity took effect for ledger history.
                     </p>
                   </div>
@@ -855,7 +855,7 @@ function EditCustomerDialog({
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-[10px] text-foreground/60">
                     Is date se billing cycle calculate hoga. Example: 25 May se start = 25 May - 24 June.
                   </p>
                   <FormMessage />
@@ -877,7 +877,7 @@ function EditCustomerDialog({
           <Button
             type="submit"
             form="edit-customer-form"
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
             disabled={submitting}
           >
             {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
@@ -1133,7 +1133,7 @@ function ShareBillDialog({
 
         {/* Bill Preview */}
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">
+          <Label className="text-xs font-medium text-foreground/60">
             Bill Preview
           </Label>
           <div className="rounded-lg border bg-muted/30 p-3 max-h-60 overflow-y-auto">
@@ -1145,19 +1145,19 @@ function ShareBillDialog({
 
         {/* Bill Summary */}
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-foreground/60">
             <Droplets className="size-3.5 text-sky-500" />
             <span>{billStats.totalQuantity.toFixed(1)} Liters</span>
           </div>
-          <div className="flex items-center gap-1.5 text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-foreground/60">
             <Calendar className="size-3.5 text-amber-500" />
             <span>{billStats.totalDays} days</span>
           </div>
-          <div className="flex items-center gap-1.5 text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-foreground/60">
             <IndianRupee className="size-3.5 text-emerald-500" />
             <span>₹{billStats.totalAmount.toFixed(2)}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-foreground/60">
             <CreditCard className="size-3.5 text-violet-500" />
             <span>₹{billStats.totalPayments.toFixed(2)} paid</span>
           </div>
@@ -1165,7 +1165,7 @@ function ShareBillDialog({
 
         <DialogFooter className="flex-col gap-2 sm:flex-col">
           <Button
-            className="w-full bg-emerald-600 hover:bg-emerald-700"
+            className="w-full btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
             onClick={handleShare}
           >
             <Send className="size-4 mr-2" />
@@ -1377,9 +1377,9 @@ export function CustomerDetailView() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 px-4">
         <div className="size-16 rounded-full bg-muted flex items-center justify-center">
-          <IndianRupee className="size-8 text-muted-foreground" />
+          <IndianRupee className="size-8 text-foreground/60" />
         </div>
-        <p className="text-muted-foreground text-sm">Customer not found</p>
+        <p className="text-foreground/60 text-sm">Customer not found</p>
         <Button
           variant="outline"
           size="sm"
@@ -1423,8 +1423,8 @@ export function CustomerDetailView() {
           </h2>
           {customer.phone && (
             <div className="flex items-center gap-1 mt-0.5">
-              <Phone className="size-3 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">
+              <Phone className="size-3 text-foreground/60" />
+              <span className="text-xs text-foreground/60">
                 {customer.phone}
               </span>
             </div>
@@ -1481,7 +1481,7 @@ export function CustomerDetailView() {
           <Card>
             <CardHeader className="pb-2 pt-3 px-4">
               <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                <CalendarDays className="size-4 text-muted-foreground" />
+                <CalendarDays className="size-4 text-foreground/60" />
                 Billing Cycle — {format(billingCycle.start, "d MMM yyyy")} to {format(billingCycle.end, "d MMM yyyy")}
               </CardTitle>
               {!isViewingCurrentCycle && (
@@ -1510,7 +1510,7 @@ export function CustomerDetailView() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] text-muted-foreground">
+                  <p className="text-[9px] text-foreground/60">
                     {cycleStats.elapsedDays}/{cycleStats.totalCycleDays} days
                   </p>
                   {cycleStats.skippedDays > 0 && (
@@ -1527,7 +1527,7 @@ export function CustomerDetailView() {
                     <IndianRupee className="size-4 text-amber-600 dark:text-amber-400" />
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                    <p className="text-[10px] uppercase tracking-wide text-foreground/60 font-medium">
                       Is Period ka Bill
                     </p>
                     <p className="text-sm font-bold text-foreground">
@@ -1540,7 +1540,7 @@ export function CustomerDetailView() {
                     <CreditCard className="size-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                    <p className="text-[10px] uppercase tracking-wide text-foreground/60 font-medium">
                       Payment Done
                     </p>
                     <p className="text-sm font-bold text-foreground">
@@ -1575,7 +1575,7 @@ export function CustomerDetailView() {
               {/* Net Balance - simple row */}
               <Separator />
               <div className="flex items-center justify-between px-1">
-                <p className="text-xs font-medium text-muted-foreground">
+                <p className="text-xs font-medium text-foreground/60">
                   Net Balance
                 </p>
                 <p
@@ -1599,7 +1599,7 @@ export function CustomerDetailView() {
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                <CalendarDays className="size-4 text-muted-foreground" />
+                <CalendarDays className="size-4 text-foreground/60" />
                 Delivery Calendar
               </CardTitle>
               <div className="flex items-center gap-1">
@@ -1640,7 +1640,7 @@ export function CustomerDetailView() {
                     className={`text-[9px] px-2 py-1 rounded-full border transition-colors ${
                       billingCycle && billingCycle.startStr === cycle.startStr
                         ? "bg-emerald-100 border-emerald-300 text-emerald-700 dark:bg-emerald-900/40 dark:border-emerald-700 dark:text-emerald-300 font-semibold"
-                        : "bg-muted/50 border-muted text-muted-foreground hover:bg-muted"
+                        : "bg-muted/50 border-muted text-foreground/60 hover:bg-muted"
                     }`}
                   >
                     {format(cycle.start, "d MMM")} - {format(cycle.end, "d MMM")}
@@ -1658,7 +1658,7 @@ export function CustomerDetailView() {
                 </span>
                 <Button
                   size="sm"
-                  className="h-6 text-[10px] px-2 bg-emerald-600 hover:bg-emerald-700"
+                  className="h-6 text-[10px] px-2 btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
                   onClick={() => setShareBillDialogOpen(true)}
                 >
                   <Share2 className="size-3 mr-1" />
@@ -1709,8 +1709,8 @@ export function CustomerDetailView() {
               </div>
             ) : (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="size-5 text-muted-foreground animate-spin" />
-                <span className="ml-2 text-sm text-muted-foreground">Loading calendar...</span>
+                <Loader2 className="size-5 text-foreground/60 animate-spin" />
+                <span className="ml-2 text-sm text-foreground/60">Loading calendar...</span>
               </div>
             )}
 
@@ -1718,23 +1718,23 @@ export function CustomerDetailView() {
             <div className="flex items-center gap-3 mt-3 justify-center flex-wrap">
               <div className="flex items-center gap-1">
                 <div className="size-2.5 rounded-sm bg-emerald-400" />
-                <span className="text-[10px] text-muted-foreground">Delivered</span>
+                <span className="text-[10px] text-foreground/60">Delivered</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="size-2.5 rounded-sm bg-red-400" />
-                <span className="text-[10px] text-muted-foreground">Skipped</span>
+                <span className="text-[10px] text-foreground/60">Skipped</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="size-2.5 rounded-sm bg-gray-300 dark:bg-gray-600" />
-                <span className="text-[10px] text-muted-foreground">No delivery</span>
+                <span className="text-[10px] text-foreground/60">No delivery</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="size-2.5 rounded-sm border border-dashed border-blue-300 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-700" />
-                <span className="text-[10px] text-muted-foreground">Pending</span>
+                <span className="text-[10px] text-foreground/60">Pending</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="size-2.5 rounded-sm ring-1 ring-amber-400" />
-                <span className="text-[10px] text-muted-foreground">Today</span>
+                <span className="text-[10px] text-foreground/60">Today</span>
               </div>
             </div>
           </CardContent>
@@ -1772,15 +1772,15 @@ export function CustomerDetailView() {
               <h3 className="text-sm font-semibold text-foreground">
                 Recent Deliveries
               </h3>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-foreground/60">
                 {customerDeliveries.length} total
               </span>
             </div>
 
             {customerDeliveries.length === 0 ? (
               <div className="flex flex-col items-center py-8 gap-2">
-                <Truck className="size-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
+                <Truck className="size-8 text-foreground/60" />
+                <p className="text-sm text-foreground/60">
                   No deliveries recorded yet
                 </p>
               </div>
@@ -1823,7 +1823,7 @@ export function CustomerDetailView() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-foreground/60">
                               {delivery.quantity}L @ {formatCurrency(delivery.pricePerL)}/L
                             </span>
                             <Badge
@@ -1865,8 +1865,8 @@ export function CustomerDetailView() {
 
             {customerPayments.length === 0 ? (
               <div className="flex flex-col items-center py-8 gap-2">
-                <CreditCard className="size-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
+                <CreditCard className="size-8 text-foreground/60" />
+                <p className="text-sm text-foreground/60">
                   No payments recorded yet
                 </p>
               </div>
@@ -1903,7 +1903,7 @@ export function CustomerDetailView() {
                                 payment.paymentMode}
                             </Badge>
                             {payment.notes && (
-                              <span className="text-xs text-muted-foreground truncate">
+                              <span className="text-xs text-foreground/60 truncate">
                                 {payment.notes}
                               </span>
                             )}

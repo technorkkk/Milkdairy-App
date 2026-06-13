@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 
 interface LoginFormProps {
   onSwitchToSignup: () => void;
@@ -53,7 +53,7 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="font-medium">Email</Label>
             <Input
               id="email"
               type="email"
@@ -67,7 +67,7 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="font-medium">Password</Label>
             <Input
               id="password"
               type="password"
@@ -81,23 +81,29 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
           </div>
 
           {error && (
-            <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-              {error}
+            <div className="error-alert" role="alert" aria-live="assertive">
+              <AlertCircle className="w-4 h-4 error-alert-icon" />
+              <div>
+                <p className="error-alert-title">Sign In Failed</p>
+                <p className="error-alert-desc">
+                  {error.includes("Invalid") ? "The email or password you entered is incorrect. Please try again." : error}
+                </p>
+              </div>
             </div>
           )}
 
-          <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={loading}>
+          <Button type="submit" className="w-full btn-primary-prominent bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20" disabled={loading}>
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Sign In
+            Sign In to Your Account
           </Button>
 
           <div className="text-center">
             <button
               type="button"
               onClick={() => { clearError(); onSwitchToSignup(); }}
-              className="text-sm text-muted-foreground hover:text-foreground underline"
+              className="text-sm text-foreground/70 hover:text-foreground underline underline-offset-2 transition-colors"
             >
-              Don&apos;t have an account? Sign up
+              Don&apos;t have an account? <span className="font-semibold text-emerald-700">Sign up</span>
             </button>
           </div>
         </form>
